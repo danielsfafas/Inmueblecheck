@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// CONFIGURACIÓN Y MULTI-TENANT
+
+model Inmobiliaria {
+  id                        String    @id @default(uuid())
+  nombre                    String
+  razonSocial               String
+  rfc                       String?
+  domicilio                 String?
+  telefono                  String
+  email                     String    @unique
+  emailPrivacidad           String
+  horario                   String?
+  activa                    Boolean   @default(true)
+  
+  // Configuración legal
+  registroProfeco           String?
+  licenciaEstatal           String?
+  urlAvisoPrivacidad        String?
+  
+  // Leyendas configurables
+  leyendaProfeco            String?
+  leyendaNom247             String?
+  
+  // Opciones
+  permiteCookies            Boolean   @default(false)
+  
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  
+  // Relaciones
+  usuarios                  Usuario[]
+  propiedades               Propiedad[]
+  prospectos                Prospecto[]
+  conversaciones            Conversacion[]
+  consentimientos           Consentimiento[]
+  actividades               Actividad[]
+  recordatorios             Recordatorio[]
+
+  @@index([email])
+}
+
+model Usuario {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  nombre            String
+  email             String
+  password          String
+  rol               RolUsuario   @default(EJECUTIVO)
+  activo            Boolean      @default(true)
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relaciones
+  prospectosAsignados     Prospecto[]
+  actividades             Actividad[]
+  recordatoriosCreados    Recordatorio[]
+  sesiones                Sesion[]
+
+  @@unique([inmobiliariaId, email])
+  @@index([inmobiliariaId])
+  @@index([email])
+}
+
+model Sesion {
+  id                String    @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  token             String    @unique
+  ip                String?
+  userAgent         String?
+  
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime
+  
+  @@index([usuarioId])
+  @@index([token])
+}
+
+enum RolUsuario {
+  ADMIN
+  SUPERVISOR
+  EJECUTIVO
+}
+
+// PROPIEDADES
+
+model Propiedad {
+  id                    String       @id @default(uuid())
+  inmobiliariaId        String
+  inmobiliaria          Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  titulo                String
+  descripcion           String       @db.Text
+  tipo                  TipoOperacion
+  precio                Decimal      @db.Decimal(12, 2)
+  
+  // Ubicación
+  direccion             String?
+  colonia               String
+  ciudad                String
+  estado                String       @default("Hidalgo")
+  codigoPostal          String?
+  latitud               Decimal?     @db.Decimal(10, 8)
+  longitud              Decimal?     @db.Decimal(11, 8)
+  latitudAprox          Decimal?     @db.Decimal(10, 8)
+  longitudAprox         Decimal?     @db.Decimal(11, 8)
+  
+  // Características
+  metrosTerreno         Decimal?     @db.Decimal(10, 2)
+  metrosConstruccion    Decimal      @db.Decimal(10, 2)
+  recamaras             Int
+  banos                 Int
+  estacionamientos      Int          @default(0)
+  
+  // Créditos aceptados
+  aceptaContado         Boolean      @default(true)
+  aceptaBancario        Boolean      @default(false)
+  aceptaInfonavit       Boolean      @default(false)
+  aceptaFovissste       Boolean      @default(false)
+  
+  // Estado
+  estado                EstadoPropiedad @default(DISPONIBLE)
+  
+  // Medios
+  fotos                 String[]
+  videoUrl              String?
+  
+  // Métricas
+  vistas                Int          @default(0)
+  clicsWhatsapp         Int          @default(0)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relaciones
+  intereses             Interes[]
+
+  @@index([inmobiliariaId])
+  @@index([estado])
+  @@index([tipo])
+}
+
+enum TipoOperacion {
+  VENTA
+  RENTA
+}
+
+enum EstadoPropiedad {
+  DISPONIBLE
+  APARTADA
+  VENDIDA
+}
+
+// PROSPECTOS Y CRM
+
+model Prospecto {
+  id                    String       @id @default(uuid())
+  inmobiliariaId        String
+  inmobiliaria          Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  nombre                String
+  telefono              String
+  email                 String?
+  
+  // Calificación
+  presupuesto           Decimal?     @db.Decimal(12, 2)
+  formaPago             String?
+  creditoPreaprobado    Decimal?     @db.Decimal(12, 2)
+  calificacion          Calificacion @default(FRIO)
+  calificacionManual    Boolean      @default(false)
+  
+  // Origen
+  origen                String?
+  
+  // Asignación
+  ejecutivoId           String?
+  ejecutivo             Usuario?     @relation(fields: [ejecutivoId], references: [id])
+  
+  // Estado en embudo
+  etapa                 EtapaEmbudo  @default(NUEVO)
+  
+  // Marca de no contactar (REPEP/BAJA)
+  noContactar           Boolean      @default(false)
+  motivoBaja            String?
+  fechaBaja             DateTime?
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relaciones
+  conversaciones        Conversacion[]
+  actividades           Actividad[]
+  consentimientos       Consentimiento[]
+  intereses             Interes[]
+  recordatorios         Recordatorio[]
+
+  @@index([inmobiliariaId])
+  @@index([telefono])
+  @@index([ejecutivoId])
+  @@index([etapa])
+  @@index([calificacion])
+}
+
+enum Calificacion {
+  CALIENTE
+  TIBIO
+  FRIO
+}
+
+enum EtapaEmbudo {
+  NUEVO
+  CONTACTADO
+  VISITA
+  OFERTA
+  APARTADO
+  CERRADO
+}
+
+model Interes {
+  id                String     @id @default(uuid())
+  prospectoId       String
+  prospecto         Prospecto  @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  propiedadId       String
+  propiedad         Propiedad  @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime   @default(now())
+
+  @@unique([prospectoId, propiedadId])
+  @@index([prospectoId])
+  @@index([propiedadId])
+}
+
+// CONVERSACIONES Y BOT
+
+model Conversacion {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  plataforma        String       @default("whatsapp")
+  idExterno         String?
+  
+  atendidoPorBot    Boolean      @default(true)
+  pasadoAHumano     Boolean      @default(false)
+  resumenBot        String?      @db.Text
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relaciones
+  mensajes          Mensaje[]
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([idExterno])
+}
+
+model Mensaje {
+  id                String       @id @default(uuid())
+  conversacionId    String
+  conversacion      Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  
+  remitente         String
+  contenido         String       @db.Text
+  esBot             Boolean      @default(false)
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([conversacionId])
+  @@index([createdAt])
+}
+
+// ACTIVIDADES Y RECORDATORIOS
+
+model Actividad {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String?
+  usuario           Usuario?     @relation(fields: [usuarioId], references: [id])
+  
+  tipo              TipoActividad
+  titulo            String
+  descripcion       String?      @db.Text
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([createdAt])
+}
+
+enum TipoActividad {
+  MENSAJE
+  LLAMADA
+  VISITA
+  NOTA
+  CAMBIO_ETAPA
+}
+
+model Recordatorio {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+  
+  titulo            String
+  descripcion       String?      @db.Text
+  fechaRecordatorio DateTime
+  completado        Boolean      @default(false)
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([usuarioId])
+  @@index([fechaRecordatorio])
+  @@index([completado])
+}
+
+// CONSENTIMIENTOS Y LEGAL
+
+model Consentimiento {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String?
+  prospecto         Prospecto?   @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  titular           String
+  tipo              TipoConsentimiento
+  accion            AccionConsentimiento
+  versionDocumento  String
+  textoHash         String
+  
+  canal             String
+  ip                String?
+  userAgent         String?
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([tipo])
+  @@index([createdAt])
+}
+
+enum TipoConsentimiento {
+  AVISO_PRIVACIDAD
+  DATOS_FINANCIEROS
+  TRANSFERENCIAS
+  OPTIN_WHATSAPP_SERVICIO
+  OPTIN_WHATSAPP_MARKETING
+  OPTIN_LLAMADAS
+  COOKIES_ANALITICA
+  TERMINOS_SAAS
+  ENCARGO
+}
+
+enum AccionConsentimiento {
+  OTORGA
+  REVOCA
+  BAJA
+}
