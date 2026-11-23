@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Plus, Eye, Video, Film } from 'lucide-react';
+import { Plus, Eye, Video, Film, Edit, Image } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import VideoManager from '../../components/VideoManager';
+import PropiedadFormModal from '../../components/PropiedadFormModal';
+import PropiedadFotosManager from '../../components/PropiedadFotosManager';
 
 export default function PropiedadesAdminPage() {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [videoManagerOpen, setVideoManagerOpen] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [fotosManagerOpen, setFotosManagerOpen] = useState(false);
   const [selectedPropiedadId, setSelectedPropiedadId] = useState(null);
+  const [editingPropiedadId, setEditingPropiedadId] = useState(null);
 
   useEffect(() => {
     cargarPropiedades();
@@ -104,6 +109,16 @@ export default function PropiedadesAdminPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Propiedades</h1>
+        <button
+          onClick={() => {
+            setEditingPropiedadId(null);
+            setFormModalOpen(true);
+          }}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Nueva Propiedad
+        </button>
       </div>
 
       <div className="overflow-hidden bg-white rounded-lg shadow">
@@ -167,25 +182,47 @@ export default function PropiedadesAdminPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => generarVideo(propiedad.id)}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-purple-600 rounded-lg hover:bg-purple-700"
-                      title="Generar video vertical 9:16"
+                      onClick={() => {
+                        setEditingPropiedadId(propiedad.id);
+                        setFormModalOpen(true);
+                      }}
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
+                      title="Editar propiedad"
                     >
-                      <Video className="w-4 h-4 mr-2" />
-                      Generar
+                      <Edit className="w-3 h-3 mr-1" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPropiedadId(propiedad.id);
+                        setFotosManagerOpen(true);
+                      }}
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100"
+                      title="Gestionar fotos"
+                    >
+                      <Image className="w-3 h-3 mr-1" />
+                      Fotos
                     </button>
                     <button
                       onClick={() => {
                         setSelectedPropiedadId(propiedad.id);
                         setVideoManagerOpen(true);
                       }}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
-                      title="Gestionar videos de la propiedad"
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded hover:bg-purple-100"
+                      title="Gestionar videos"
                     >
-                      <Film className="w-4 h-4 mr-2" />
+                      <Film className="w-3 h-3 mr-1" />
                       Videos
+                    </button>
+                    <button
+                      onClick={() => generarVideo(propiedad.id)}
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 rounded hover:bg-orange-100"
+                      title="Generar video vertical 9:16"
+                    >
+                      <Video className="w-3 h-3 mr-1" />
+                      Generar
                     </button>
                   </div>
                 </td>
@@ -201,13 +238,42 @@ export default function PropiedadesAdminPage() {
         )}
       </div>
 
-      {/* Modal de gestión de videos */}
+      {/* Modales */}
+      <PropiedadFormModal
+        isOpen={formModalOpen}
+        propiedadId={editingPropiedadId}
+        onClose={() => {
+          setFormModalOpen(false);
+          setEditingPropiedadId(null);
+        }}
+        onSuccess={() => {
+          cargarPropiedades();
+          if (!editingPropiedadId) {
+            setTimeout(() => {
+              toast('Ahora agrega fotos y videos a tu propiedad', { icon: '📸' });
+            }, 500);
+          }
+        }}
+      />
+
+      {fotosManagerOpen && selectedPropiedadId && (
+        <PropiedadFotosManager
+          propiedadId={selectedPropiedadId}
+          onClose={() => {
+            setFotosManagerOpen(false);
+            setSelectedPropiedadId(null);
+            cargarPropiedades();
+          }}
+        />
+      )}
+
       {videoManagerOpen && selectedPropiedadId && (
         <VideoManager
           propiedadId={selectedPropiedadId}
           onClose={() => {
             setVideoManagerOpen(false);
             setSelectedPropiedadId(null);
+            cargarPropiedades();
           }}
         />
       )}

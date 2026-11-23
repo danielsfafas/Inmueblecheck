@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Calendar, Clock, Check } from 'lucide-react';
+import { Calendar, Clock, Check, Plus } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import RecordatorioFormModal from '../../components/RecordatorioFormModal';
 
 export default function RecordatoriosPage() {
   const [recordatorios, setRecordatorios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('pendientes');
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     cargarRecordatorios();
@@ -53,7 +55,16 @@ export default function RecordatoriosPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold text-gray-900">Recordatorios</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Recordatorios</h1>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Nuevo Recordatorio
+        </button>
+      </div>
 
       <div className="mb-6">
         <div className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg">
@@ -159,6 +170,14 @@ export default function RecordatoriosPage() {
           ))
         )}
       </div>
+
+      <RecordatorioFormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={() => {
+          cargarRecordatorios();
+        }}
+      />
     </div>
   );
 }

@@ -42,6 +42,8 @@ services:
       JWT_SECRET: dev_jwt_secret_change_in_production
       PORT: 4311
       FRONTEND_URL: http://localhost:5191
+      WHATSAPP_ENC_KEY: dev_encryption_key_change_in_prod_32bytes!
+      AI_PROVIDER: simulado
     ports:
       - "4311:4311"
     volumes:
