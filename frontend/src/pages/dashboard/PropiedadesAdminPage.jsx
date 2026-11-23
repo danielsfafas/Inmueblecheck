@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Video } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
@@ -21,6 +21,31 @@ export default function PropiedadesAdminPage() {
       toast.error('Error al cargar propiedades');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generarVideo = async (propiedadId) => {
+    try {
+      toast.loading('Generando video...', { id: 'video-gen' });
+      
+      const response = await api.get(`/videos/generar/${propiedadId}`, {
+        responseType: 'blob',
+      });
+
+      // Crear URL del blob y descargarlo
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `propiedad-${propiedadId}.mp4`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Video generado y descargado', { id: 'video-gen' });
+    } catch (error) {
+      console.error('Error al generar video:', error);
+      toast.error('Error al generar video', { id: 'video-gen' });
     }
   };
 
@@ -83,6 +108,9 @@ export default function PropiedadesAdminPage() {
               <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                 Métricas
               </th>
+              <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -120,6 +148,16 @@ export default function PropiedadesAdminPage() {
                       WhatsApp: {propiedad.clicsWhatsapp || 0}
                     </div>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => generarVideo(propiedad.id)}
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-purple-600 rounded-lg hover:bg-purple-700"
+                    title="Generar video vertical 9:16"
+                  >
+                    <Video className="w-4 h-4 mr-2" />
+                    Generar Video
+                  </button>
                 </td>
               </tr>
             ))}
