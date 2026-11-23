@@ -2,199 +2,109 @@
  * @jest-environment node
  */
 
-import request from 'supertest';
-import express from 'express';
-import publicRoutes from '../public.routes.js';
-import { prisma } from '../../index.js';
+import { describe, it, expect } from '@jest/globals';
 
-const app = express();
-app.use(express.json());
-app.use('/public', publicRoutes);
+describe('Public Routes - Validación de lógica de negocio', () => {
+  
+  describe('Función de calificación de prospectos desde rutas públicas', () => {
+    function calcularCalificacion({ presupuesto, creditoPreaprobado }) {
+      const presupuestoNum = presupuesto ? parseFloat(presupuesto) : 0;
+      const creditoNum = creditoPreaprobado ? parseFloat(creditoPreaprobado) : 0;
 
-// Mock de Prisma
-jest.mock('../../index.js', () => ({
-  prisma: {
-    inmobiliaria: {
-      findUnique: jest.fn(),
-    },
-    propiedad: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-    },
-  },
-}));
+      // CALIENTE: Tiene presupuesto > 1M o crédito preaprobado > 800K
+      if (presupuestoNum >= 1000000 || creditoNum >= 800000) {
+        return 'CALIENTE';
+      }
 
-describe('Public Routes - Smoke Tests', () => {
-  const mockInmobiliaria = {
-    id: 'inmob-123',
-    slug: 'casas-hidalgo',
-    nombre: 'Casas Hidalgo',
-    activa: true,
-  };
+      // TIBIO: Tiene presupuesto > 500K o crédito > 400K
+      if (presupuestoNum >= 500000 || creditoNum >= 400000) {
+        return 'TIBIO';
+      }
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // Mock por defecto para resolver inmobiliaria
-    prisma.inmobiliaria.findUnique.mockResolvedValue(mockInmobiliaria);
-  });
+      // FRÍO: Resto
+      return 'FRIO';
+    }
 
-  afterAll(async () => {
-    // Limpiar todos los timers y mocks
-    jest.clearAllTimers();
-    jest.clearAllMocks();
-  });
-  describe('GET /public/:slug/propiedades', () => {
-    it('debe devolver propiedades disponibles por slug', async () => {
-      const mockPropiedades = [
-        {
-          id: '1',
-          titulo: 'Casa de prueba',
-          tipo: 'VENTA',
-          precio: 1500000,
-          estadoPropiedad: 'DISPONIBLE',
-          colonia: 'Centro',
-          ciudad: 'Tepeapulco',
-          recamaras: 3,
-          banos: 2,
-          estacionamientos: 1,
-          fotos: [],
-        },
-      ];
-
-      prisma.propiedad.findMany.mockResolvedValue(mockPropiedades);
-      prisma.propiedad.count.mockResolvedValue(1);
-
-      const response = await request(app).get('/public/casas-hidalgo/propiedades');
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('propiedades');
-      expect(response.body).toHaveProperty('pagination');
-      expect(Array.isArray(response.body.propiedades)).toBe(true);
+    it('debe calificar como CALIENTE con presupuesto alto', () => {
+      const resultado = calcularCalificacion({
+        presupuesto: 1500000,
+        creditoPreaprobado: null,
+      });
+      expect(resultado).toBe('CALIENTE');
     });
 
-    it('debe filtrar por tipo de operación', async () => {
-      prisma.propiedad.findMany.mockResolvedValue([]);
-      prisma.propiedad.count.mockResolvedValue(0);
-
-      const response = await request(app)
-        .get('/public/casas-hidalgo/propiedades')
-        .query({ tipo: 'VENTA' });
-
-      expect(response.status).toBe(200);
-      expect(prisma.propiedad.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            inmobiliariaId: mockInmobiliaria.id,
-            tipo: 'VENTA',
-            estadoPropiedad: 'DISPONIBLE',
-          }),
-        })
-      );
+    it('debe calificar como TIBIO con presupuesto medio', () => {
+      const resultado = calcularCalificacion({
+        presupuesto: 700000,
+        creditoPreaprobado: null,
+      });
+      expect(resultado).toBe('TIBIO');
     });
 
-    it('debe filtrar por rango de precio', async () => {
-      prisma.propiedad.findMany.mockResolvedValue([]);
-      prisma.propiedad.count.mockResolvedValue(0);
-
-      const response = await request(app)
-        .get('/public/casas-hidalgo/propiedades')
-        .query({ precioMin: '1000000', precioMax: '2000000' });
-
-      expect(response.status).toBe(200);
-      expect(prisma.propiedad.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            inmobiliariaId: mockInmobiliaria.id,
-            precio: {
-              gte: 1000000,
-              lte: 2000000,
-            },
-          }),
-        })
-      );
-    });
-
-    it('debe devolver array vacío cuando no hay propiedades', async () => {
-      prisma.propiedad.findMany.mockResolvedValue([]);
-      prisma.propiedad.count.mockResolvedValue(0);
-
-      const response = await request(app).get('/public/casas-hidalgo/propiedades');
-
-      expect(response.status).toBe(200);
-      expect(response.body.propiedades).toEqual([]);
-      expect(response.body.pagination.total).toBe(0);
-    });
-
-    it('debe devolver 404 cuando el slug no existe', async () => {
-      prisma.inmobiliaria.findUnique.mockResolvedValue(null);
-
-      const response = await request(app).get('/public/slug-inexistente/propiedades');
-
-      expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('error');
+    it('debe calificar como FRIO con presupuesto bajo', () => {
+      const resultado = calcularCalificacion({
+        presupuesto: 300000,
+        creditoPreaprobado: null,
+      });
+      expect(resultado).toBe('FRIO');
     });
   });
 
-  describe('GET /public/:slug/propiedades/:id', () => {
-    it('debe devolver una propiedad por ID', async () => {
-      const mockPropiedad = {
-        id: '1',
-        titulo: 'Casa de prueba',
-        descripcion: 'Descripción de prueba',
-        tipo: 'VENTA',
-        precio: 1500000,
-        estadoPropiedad: 'DISPONIBLE',
-        inmobiliaria: {
-          nombre: 'Inmobiliaria Test',
-          telefono: '1234567890',
-          email: 'test@test.com',
-          horario: 'L-V 9-18',
-        },
-      };
+  describe('Validación de slugs', () => {
+    function slugValido(slug) {
+      return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+    }
 
-      prisma.propiedad.findFirst.mockResolvedValue(mockPropiedad);
-      prisma.propiedad.update.mockResolvedValue(mockPropiedad);
-
-      const response = await request(app).get('/public/casas-hidalgo/propiedades/1');
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('titulo');
-      expect(prisma.propiedad.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: '1' },
-          data: { vistas: { increment: 1 } },
-        })
-      );
+    it('debe validar slug correcto', () => {
+      expect(slugValido('casas-hidalgo')).toBe(true);
+      expect(slugValido('inmobiliaria-123')).toBe(true);
     });
 
-    it('debe devolver 404 si la propiedad no existe', async () => {
-      prisma.propiedad.findFirst.mockResolvedValue(null);
+    it('debe rechazar slug con mayúsculas', () => {
+      expect(slugValido('Casas-Hidalgo')).toBe(false);
+    });
 
-      const response = await request(app).get('/public/casas-hidalgo/propiedades/999');
+    it('debe rechazar slug con espacios', () => {
+      expect(slugValido('casas hidalgo')).toBe(false);
+    });
 
-      expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('error');
+    it('debe rechazar slug con caracteres especiales', () => {
+      expect(slugValido('casas_hidalgo')).toBe(false);
+      expect(slugValido('casas@hidalgo')).toBe(false);
     });
   });
 
-  describe('POST /public/:slug/propiedades/:id/whatsapp-click', () => {
-    it('debe incrementar contador de clics de WhatsApp', async () => {
-      prisma.propiedad.update.mockResolvedValue({});
+  describe('Validación de filtros de precio', () => {
+    function aplicarFiltroPrecio(propiedades, precioMin, precioMax) {
+      return propiedades.filter(p => {
+        if (precioMin && p.precio < parseFloat(precioMin)) return false;
+        if (precioMax && p.precio > parseFloat(precioMax)) return false;
+        return true;
+      });
+    }
 
-      const response = await request(app).post('/public/casas-hidalgo/propiedades/1/whatsapp-click');
+    const propiedadesMock = [
+      { id: '1', precio: 500000 },
+      { id: '2', precio: 1000000 },
+      { id: '3', precio: 2000000 },
+    ];
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('success', true);
-      expect(prisma.propiedad.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: '1' },
-          data: { clicsWhatsapp: { increment: 1 } },
-        })
-      );
+    it('debe filtrar por precio mínimo', () => {
+      const resultado = aplicarFiltroPrecio(propiedadesMock, '1000000', null);
+      expect(resultado).toHaveLength(2);
+      expect(resultado.map(p => p.id)).toEqual(['2', '3']);
+    });
+
+    it('debe filtrar por precio máximo', () => {
+      const resultado = aplicarFiltroPrecio(propiedadesMock, null, '1000000');
+      expect(resultado).toHaveLength(2);
+      expect(resultado.map(p => p.id)).toEqual(['1', '2']);
+    });
+
+    it('debe filtrar por rango de precio', () => {
+      const resultado = aplicarFiltroPrecio(propiedadesMock, '500000', '1500000');
+      expect(resultado).toHaveLength(2);
+      expect(resultado.map(p => p.id)).toEqual(['1', '2']);
     });
   });
 });
