@@ -16,18 +16,21 @@ import {
 import toast from 'react-hot-toast';
 
 export default function PropiedadDetallePage() {
-  const { id } = useParams();
+  const { slug, id } = useParams();
   const [propiedad, setPropiedad] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Slug por defecto en desarrollo
+  const slugInmobiliaria = slug || 'casas-hidalgo';
+
   useEffect(() => {
     cargarPropiedad();
-  }, [id]);
+  }, [slugInmobiliaria, id]);
 
   const cargarPropiedad = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/public/propiedades/${id}`);
+      const { data } = await api.get(`/public/${slugInmobiliaria}/propiedades/${id}`);
       setPropiedad(data);
     } catch (error) {
       toast.error('Error al cargar la propiedad');
@@ -40,7 +43,7 @@ export default function PropiedadDetallePage() {
     if (!propiedad) return;
 
     try {
-      await api.post(`/public/propiedades/${id}/whatsapp-click`);
+      await api.post(`/public/${slugInmobiliaria}/propiedades/${id}/whatsapp-click`);
       
       const mensaje = encodeURIComponent(
         `Hola, me interesa la propiedad: ${propiedad.titulo} (${formatCurrency(propiedad.precio)})`

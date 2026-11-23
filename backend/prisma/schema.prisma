@@ -12,6 +12,7 @@ datasource db {
 
 model Inmobiliaria {
   id                        String    @id @default(uuid())
+  slug                      String    @unique
   nombre                    String
   razonSocial               String
   rfc                       String?
@@ -47,6 +48,7 @@ model Inmobiliaria {
   recordatorios             Recordatorio[]
 
   @@index([email])
+  @@index([slug])
 }
 
 model Usuario {

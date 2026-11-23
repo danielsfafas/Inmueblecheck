@@ -19,6 +19,7 @@ import PropiedadesAdminPage from './pages/dashboard/PropiedadesAdminPage';
 import RecordatoriosPage from './pages/dashboard/RecordatoriosPage';
 import ReportesPage from './pages/dashboard/ReportesPage';
 import ConfiguracionPage from './pages/dashboard/ConfiguracionPage';
+import BotSimuladorPage from './pages/dashboard/BotSimuladorPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
@@ -30,10 +31,14 @@ function App() {
   return (
     <Routes>
       {/* Rutas públicas */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/propiedades" element={<PropiedadesPage />} />
-      <Route path="/propiedades/:id" element={<PropiedadDetallePage />} />
+      <Route path="/" element={<Navigate to="/i/casas-hidalgo/propiedades" />} />
+      <Route path="/i/:slug/propiedades" element={<PropiedadesPage />} />
+      <Route path="/i/:slug/propiedades/:id" element={<PropiedadDetallePage />} />
       <Route path="/privacidad" element={<PrivacidadPage />} />
+      
+      {/* Rutas legacy (redirigir a casas-hidalgo) */}
+      <Route path="/propiedades" element={<Navigate to="/i/casas-hidalgo/propiedades" />} />
+      <Route path="/propiedades/:id" element={<Navigate to="/i/casas-hidalgo/propiedades/:id" />} />
       
       {/* Autenticación */}
       <Route path="/login" element={<LoginPage />} />
@@ -53,6 +58,7 @@ function App() {
         <Route path="propiedades" element={<PropiedadesAdminPage />} />
         <Route path="recordatorios" element={<RecordatoriosPage />} />
         <Route path="reportes" element={<ReportesPage />} />
+        <Route path="bot-simulador" element={<BotSimuladorPage />} />
         <Route path="configuracion" element={<ConfiguracionPage />} />
       </Route>
       

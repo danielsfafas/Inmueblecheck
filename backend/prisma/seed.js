@@ -13,6 +13,7 @@ async function main() {
     where: { email: 'contacto@casashidalgo.com.mx' },
     update: {},
     create: {
+      slug: 'casas-hidalgo',
       nombre: 'Casas Hidalgo',
       razonSocial: 'Inmobiliaria Casas Hidalgo S.A. de C.V.',
       rfc: 'ICH2020123A1',
@@ -119,9 +120,9 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/casa1-fachada.jpg',
-        '/uploads/propiedades/casa1-sala.jpg',
-        '/uploads/propiedades/casa1-cocina.jpg'
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg'
       ],
     },
     {
@@ -147,8 +148,8 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/depto1-fachada.jpg',
-        '/uploads/propiedades/depto1-sala.jpg'
+        '/demo/placeholder-departamento.svg',
+        '/demo/placeholder-departamento.svg'
       ],
     },
     {
@@ -175,10 +176,10 @@ async function main() {
       aceptaFovissste: true,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/casa2-fachada.jpg',
-        '/uploads/propiedades/casa2-sala.jpg',
-        '/uploads/propiedades/casa2-recamara.jpg',
-        '/uploads/propiedades/casa2-patio.jpg'
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg'
       ],
       vistas: 15,
       clicsWhatsapp: 3,
@@ -207,8 +208,8 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/casa3-fachada.jpg',
-        '/uploads/propiedades/casa3-jardin.jpg'
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg'
       ],
       vistas: 8,
       clicsWhatsapp: 1,
@@ -236,8 +237,8 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/depto2-sala.jpg',
-        '/uploads/propiedades/depto2-recamara.jpg'
+        '/demo/placeholder-departamento.svg',
+        '/demo/placeholder-departamento.svg'
       ],
       vistas: 22,
       clicsWhatsapp: 5,
@@ -266,9 +267,9 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'APARTADA',
       fotos: [
-        '/uploads/propiedades/casa4-fachada.jpg',
-        '/uploads/propiedades/casa4-alberca.jpg',
-        '/uploads/propiedades/casa4-sala.jpg'
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg'
       ],
       vistas: 45,
       clicsWhatsapp: 12,
@@ -296,8 +297,8 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/uploads/propiedades/local1-frente.jpg',
-        '/uploads/propiedades/local1-interior.jpg'
+        '/demo/placeholder-casa.svg',
+        '/demo/placeholder-casa.svg'
       ],
       vistas: 18,
       clicsWhatsapp: 4,
@@ -326,7 +327,7 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'VENDIDA',
       fotos: [
-        '/uploads/propiedades/terreno1.jpg'
+        '/demo/placeholder-terreno.svg'
       ],
       vistas: 32,
       clicsWhatsapp: 8,

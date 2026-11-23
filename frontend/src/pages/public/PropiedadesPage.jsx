@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { formatCurrency } from '../../utils/formatters';
 import { Building2, Bed, Bath, Car, MapPin, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PropiedadesPage() {
+  const { slug } = useParams();
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
@@ -16,9 +17,12 @@ export default function PropiedadesPage() {
     recamaras: '',
   });
 
+  // Slug por defecto en desarrollo
+  const slugInmobiliaria = slug || 'casas-hidalgo';
+
   useEffect(() => {
     cargarPropiedades();
-  }, []);
+  }, [slugInmobiliaria]);
 
   const cargarPropiedades = async () => {
     try {
@@ -28,7 +32,7 @@ export default function PropiedadesPage() {
         Object.entries(filtros).filter(([_, value]) => value !== '')
       );
       
-      const { data } = await api.get('/public/propiedades', { params });
+      const { data } = await api.get(`/public/${slugInmobiliaria}/propiedades`, { params });
       setPropiedades(data.propiedades || []);
     } catch (error) {
       console.error('Error al cargar propiedades:', error);
@@ -133,15 +137,26 @@ export default function PropiedadesPage() {
             {propiedades.map((propiedad) => (
               <Link
                 key={propiedad.id}
-                to={`/propiedades/${propiedad.id}`}
+                to={`/i/${slugInmobiliaria}/propiedades/${propiedad.id}`}
                 className="overflow-hidden transition-all bg-white rounded-xl shadow-md hover:shadow-2xl hover:-translate-y-1"
               >
                 <div className="relative h-56 bg-gradient-to-br from-primary-100 to-primary-200">
                   {propiedad.fotos && propiedad.fotos[0] ? (
                     <img
                       src={propiedad.fotos[0]}
-                      alt={propiedad.titulo}
+                      alt=""
                       className="object-cover w-full h-full"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div class="flex flex-col items-center justify-center h-full">
+                            <svg class="w-20 h-20 text-primary-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span class="text-primary-600 font-medium">Imagen no disponible</span>
+                          </div>
+                        `;
+                      }}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full">

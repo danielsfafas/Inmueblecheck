@@ -3,11 +3,34 @@ import { prisma } from '../index.js';
 
 const router = express.Router();
 
-// Obtener propiedades públicas con filtros
-router.get('/propiedades', async (req, res, next) => {
+// Middleware para resolver inmobiliaria por slug
+const resolverInmobiliaria = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    
+    if (!slug) {
+      return res.status(400).json({ error: 'Slug de inmobiliaria requerido' });
+    }
+
+    const inmobiliaria = await prisma.inmobiliaria.findUnique({
+      where: { slug, activa: true },
+    });
+
+    if (!inmobiliaria) {
+      return res.status(404).json({ error: 'Inmobiliaria no encontrada' });
+    }
+
+    req.inmobiliaria = inmobiliaria;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Obtener propiedades públicas con filtros (con slug de inmobiliaria)
+router.get('/:slug/propiedades', resolverInmobiliaria, async (req, res, next) => {
   try {
     const {
-      inmobiliariaId,
       tipo,
       zona,
       precioMin,
@@ -19,13 +42,9 @@ router.get('/propiedades', async (req, res, next) => {
     } = req.query;
 
     const where = {
+      inmobiliariaId: req.inmobiliaria.id,
       estadoPropiedad: 'DISPONIBLE',
     };
-
-    // Si se especifica inmobiliariaId, filtrar por ella
-    if (inmobiliariaId) {
-      where.inmobiliariaId = inmobiliariaId;
-    }
 
     if (tipo) {
       where.tipo = tipo;
@@ -91,13 +110,16 @@ router.get('/propiedades', async (req, res, next) => {
   }
 });
 
-// Obtener una propiedad por ID
-router.get('/propiedades/:id', async (req, res, next) => {
+// Obtener una propiedad por ID (con slug de inmobiliaria)
+router.get('/:slug/propiedades/:id', resolverInmobiliaria, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const propiedad = await prisma.propiedad.findUnique({
-      where: { id },
+    const propiedad = await prisma.propiedad.findFirst({
+      where: {
+        id,
+        inmobiliariaId: req.inmobiliaria.id,
+      },
       include: {
         inmobiliaria: {
           select: {
@@ -126,8 +148,8 @@ router.get('/propiedades/:id', async (req, res, next) => {
   }
 });
 
-// Registrar clic en WhatsApp
-router.post('/propiedades/:id/whatsapp-click', async (req, res, next) => {
+// Registrar clic en WhatsApp (con slug de inmobiliaria)
+router.post('/:slug/propiedades/:id/whatsapp-click', resolverInmobiliaria, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -142,11 +164,10 @@ router.post('/propiedades/:id/whatsapp-click', async (req, res, next) => {
   }
 });
 
-// Crear prospecto desde formulario público
-router.post('/prospectos', async (req, res, next) => {
+// Crear prospecto desde formulario público (con slug de inmobiliaria)
+router.post('/:slug/prospectos', resolverInmobiliaria, async (req, res, next) => {
   try {
     const {
-      inmobiliariaId,
       nombre,
       telefono,
       email,
@@ -158,9 +179,11 @@ router.post('/prospectos', async (req, res, next) => {
       consentimientos,
     } = req.body;
 
-    if (!inmobiliariaId || !nombre || !telefono) {
+    if (!nombre || !telefono) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
+
+    const inmobiliariaId = req.inmobiliaria.id;
 
     // Calificar automáticamente
     const calificacion = calcularCalificacion({
