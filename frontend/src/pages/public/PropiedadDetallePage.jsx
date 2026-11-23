@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
 import { formatCurrency } from '../../utils/formatters';
+import { mediaUrl } from '../../utils/mediaUrl';
 import {
   Building2,
   Bed,
@@ -91,7 +92,7 @@ export default function PropiedadDetallePage() {
             <div className="mb-6 overflow-hidden bg-gray-200 rounded-lg aspect-video">
               {propiedad.fotos && propiedad.fotos[0] ? (
                 <img
-                  src={propiedad.fotos[0]}
+                  src={mediaUrl(propiedad.fotos[0])}
                   alt={propiedad.titulo}
                   className="object-cover w-full h-full"
                 />
@@ -158,12 +159,7 @@ export default function PropiedadDetallePage() {
                         <iframe
                           src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}`}
                           loading="lazy"
-                          className={
-                            video.youtubeId && video.youtubeId.length === 11 && 
-                            (typeof video.archivoUrl === 'string' && video.archivoUrl.includes('/shorts/'))
-                              ? 'w-full aspect-[9/16] max-h-[600px] mx-auto'
-                              : 'w-full aspect-video'
-                          }
+                          className="w-full aspect-video"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                         />
@@ -173,7 +169,7 @@ export default function PropiedadDetallePage() {
                           preload="metadata"
                           playsInline
                           className="w-full rounded-lg"
-                          src={video.archivoUrl}
+                          src={mediaUrl(video.archivoUrl)}
                         >
                           Tu navegador no soporta video HTML5.
                         </video>

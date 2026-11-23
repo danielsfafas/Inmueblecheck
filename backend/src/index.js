@@ -45,6 +45,7 @@ app.use(helmet({
       "frame-src": ["'self'", "https://www.youtube-nocookie.com"],
     },
   },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors());
 app.use(express.json());

@@ -345,6 +345,11 @@ async function main() {
     },
   ];
 
+  // Limpiar propiedades existentes de demo para hacer seed idempotente
+  await prisma.propiedad.deleteMany({
+    where: { inmobiliariaId: inmobiliaria.id },
+  });
+
   for (const prop of propiedades) {
     await prisma.propiedad.create({
       data: {
@@ -420,14 +425,10 @@ async function main() {
     },
   ];
 
-  for (const prosp of prospectos) {
-    await prisma.prospecto.create({
-      data: {
-        ...prosp,
-        inmobiliariaId: inmobiliaria.id,
-      },
-    });
-  }
+  // Limpiar prospectos existentes de demo para hacer seed idempotente
+  await prisma.prospecto.deleteMany({
+    where: { inmobiliariaId: inmobiliaria.id },
+  });
 
   const prospectosCreados = [];
   for (const prosp of prospectos) {

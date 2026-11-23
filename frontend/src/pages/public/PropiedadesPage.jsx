@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { formatCurrency } from '../../utils/formatters';
+import { mediaUrl } from '../../utils/mediaUrl';
 import { Building2, Bed, Bath, Car, MapPin, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -143,7 +144,7 @@ export default function PropiedadesPage() {
                 <div className="relative h-56 bg-gradient-to-br from-primary-100 to-primary-200">
                   {propiedad.fotos && propiedad.fotos[0] ? (
                     <img
-                      src={propiedad.fotos[0]}
+                      src={mediaUrl(propiedad.fotos[0])}
                       alt=""
                       className="object-cover w-full h-full"
                       onError={(e) => {

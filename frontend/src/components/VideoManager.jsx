@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Youtube, Upload, Trash2, MoveUp, MoveDown, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import { mediaUrl } from '../utils/mediaUrl';
 import toast from 'react-hot-toast';
 
 export default function VideoManager({ propiedadId, onClose }) {
@@ -141,7 +142,7 @@ export default function VideoManager({ propiedadId, onClose }) {
     } else {
       return (
         <video
-          src={video.archivoUrl}
+          src={mediaUrl(video.archivoUrl)}
           controls
           preload="metadata"
           className="w-full rounded"
