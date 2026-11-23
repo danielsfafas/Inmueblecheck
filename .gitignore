@@ -46,6 +46,7 @@ Thumbs.db
 
 # Uploads
 backend/uploads/
+!backend/uploads/seed/
 frontend/public/uploads/
 
 # Videos generados

@@ -94,7 +94,7 @@ async function main() {
   console.log(`   📧 Email: maria.lopez@casashidalgo.com.mx | Contraseña: Demo2024! (SOLO DESARROLLO)`);
   console.log(`   📧 Email: carlos.garcia@casashidalgo.com.mx | Contraseña: Demo2024! (SOLO DESARROLLO)`);
 
-  // 3. Crear propiedades de ejemplo
+  // 3. Crear propiedades de ejemplo con fotos reales
   const propiedades = [
     {
       titulo: 'Casa en Tepeapulco Centro',
@@ -120,9 +120,10 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg'
+        '/uploads/seed/casa1-fachada.jpg',
+        '/uploads/seed/casa1-sala.jpg',
+        '/uploads/seed/casa1-cocina.jpg',
+        '/uploads/seed/casa1-recamara.jpg'
       ],
     },
     {
@@ -148,8 +149,10 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-departamento.svg',
-        '/demo/placeholder-departamento.svg'
+        '/uploads/seed/depto1-fachada.jpg',
+        '/uploads/seed/depto1-sala.jpg',
+        '/uploads/seed/depto1-cocina.jpg',
+        '/uploads/seed/depto1-recamara.jpg'
       ],
     },
     {
@@ -176,10 +179,11 @@ async function main() {
       aceptaFovissste: true,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg'
+        '/uploads/seed/casa2-fachada.jpg',
+        '/uploads/seed/casa2-sala.jpg',
+        '/uploads/seed/casa2-cocina.jpg',
+        '/uploads/seed/casa2-recamara.jpg',
+        '/uploads/seed/casa2-bano.jpg'
       ],
       vistas: 15,
       clicsWhatsapp: 3,
@@ -208,8 +212,10 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg'
+        '/uploads/seed/casa3-fachada.jpg',
+        '/uploads/seed/casa3-jardin.jpg',
+        '/uploads/seed/casa3-sala.jpg',
+        '/uploads/seed/casa3-cocina.jpg'
       ],
       vistas: 8,
       clicsWhatsapp: 1,
@@ -237,8 +243,10 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-departamento.svg',
-        '/demo/placeholder-departamento.svg'
+        '/uploads/seed/depto2-sala.jpg',
+        '/uploads/seed/depto2-cocina.jpg',
+        '/uploads/seed/depto2-recamara.jpg',
+        '/uploads/seed/depto2-comedor.jpg'
       ],
       vistas: 22,
       clicsWhatsapp: 5,
@@ -267,9 +275,11 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'APARTADA',
       fotos: [
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg'
+        '/uploads/seed/casa4-fachada.jpg',
+        '/uploads/seed/casa4-alberca.jpg',
+        '/uploads/seed/casa4-sala.jpg',
+        '/uploads/seed/casa4-cocina.jpg',
+        '/uploads/seed/casa4-bano.jpg'
       ],
       vistas: 45,
       clicsWhatsapp: 12,
@@ -297,8 +307,9 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'DISPONIBLE',
       fotos: [
-        '/demo/placeholder-casa.svg',
-        '/demo/placeholder-casa.svg'
+        '/uploads/seed/local-fachada.jpg',
+        '/uploads/seed/local-interior.jpg',
+        '/uploads/seed/local-espacio.jpg'
       ],
       vistas: 18,
       clicsWhatsapp: 4,
@@ -327,7 +338,7 @@ async function main() {
       aceptaFovissste: false,
       estadoPropiedad: 'VENDIDA',
       fotos: [
-        '/demo/placeholder-terreno.svg'
+        '/uploads/seed/terreno-venta.jpg'
       ],
       vistas: 32,
       clicsWhatsapp: 8,

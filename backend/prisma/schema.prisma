@@ -150,10 +150,33 @@ model Propiedad {
   
   // Relaciones
   intereses             Interes[]
+  videos                PropiedadVideo[]
 
   @@index([inmobiliariaId])
   @@index([estado])
   @@index([tipo])
+}
+
+model PropiedadVideo {
+  id                    String       @id @default(uuid())
+  propiedadId           String
+  propiedad             Propiedad    @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
+  
+  tipo                  TipoVideo
+  youtubeId             String?      // Para videos de YouTube (ID extraído)
+  archivoUrl            String?      // Para videos subidos (ruta del archivo)
+  orden                 Int          @default(0)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  @@index([propiedadId])
+  @@index([orden])
+}
+
+enum TipoVideo {
+  YOUTUBE
+  ARCHIVO
 }
 
 enum TipoOperacion {
