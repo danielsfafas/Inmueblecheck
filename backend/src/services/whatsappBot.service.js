@@ -369,7 +369,12 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
 }
 
 async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje, remoteJid = null) {
-  if (process.env.AI_PROVIDER === 'simulado') {
+  // AI_PROVIDER=simulado solo controla si la IA es simulada, NO si los mensajes se envían
+  // Para BAILEYS: siempre enviar mensajes reales (el bot está conectado)
+  // Para otros proveedores sin implementación: simular por ahora
+  const shouldSimulate = process.env.AI_PROVIDER === 'simulado' && numeroReceptor.proveedor !== 'BAILEYS';
+  
+  if (shouldSimulate) {
     console.log(`[SIMULADO] Enviar desde ${numeroReceptor.numero} a ${telefonoDestino}${remoteJid ? ` (JID: ${remoteJid})` : ''}: ${mensaje.substring(0, 100)}...`);
     return;
   }
