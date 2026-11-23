@@ -1,16 +1,33 @@
 import { useState } from 'react';
-import { Bot, Send, User } from 'lucide-react';
+import { Bot, Send, User, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+
+// Generar teléfono aleatorio para simular siempre primer contacto
+function generarTelefonoAleatorio() {
+  const prefijo = '775'; // Morelos, México
+  const numero = Math.floor(1000000 + Math.random() * 9000000); // 7 dígitos
+  return `${prefijo}${numero}`;
+}
 
 export default function BotSimuladorPage() {
   const [mensajes, setMensajes] = useState([]);
   const [inputMensaje, setInputMensaje] = useState('');
   const [cargando, setCargando] = useState(false);
-  const [prospectoSimulado] = useState({
+  const [prospectoSimulado, setProspectoSimulado] = useState({
     nombre: 'Usuario de Prueba',
-    telefono: '7751234567',
+    telefono: generarTelefonoAleatorio(),
   });
+
+  const nuevaConversacion = () => {
+    setMensajes([]);
+    setProspectoSimulado({
+      nombre: 'Usuario de Prueba',
+      telefono: generarTelefonoAleatorio(),
+    });
+    setInputMensaje('');
+    toast.success('Nueva conversación iniciada');
+  };
 
   const enviarMensaje = async (e) => {
     e.preventDefault();
@@ -32,6 +49,7 @@ export default function BotSimuladorPage() {
       // Llamar al endpoint real del backend
       const { data } = await api.post('/bot-simulator/mensaje', {
         mensaje: mensajeEnviado,
+        telefono: prospectoSimulado.telefono,
       });
 
       // El backend retorna un array 'respuestas' que puede contener múltiples mensajes
@@ -72,10 +90,21 @@ export default function BotSimuladorPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Simulador de Bot de WhatsApp</h1>
-        <p className="mt-2 text-gray-600">
-          Prueba las respuestas del bot antes de que interactúe con prospectos reales
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Simulador de Bot de WhatsApp</h1>
+            <p className="mt-2 text-gray-600">
+              Prueba las respuestas del bot antes de que interactúe con prospectos reales
+            </p>
+          </div>
+          <button
+            onClick={nuevaConversacion}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Nueva conversación
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -215,7 +244,7 @@ export default function BotSimuladorPage() {
               <li>• Responde consultas automáticamente</li>
               <li>• Detecta comandos AGENTE y BAJA</li>
               <li>• Pase a ejecutivo registrado</li>
-              <li>• Simulación sin afectar datos reales</li>
+              <li>• No envía WhatsApp real; crea prospectos de prueba</li>
             </ul>
           </div>
         </div>

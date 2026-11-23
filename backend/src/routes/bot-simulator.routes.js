@@ -12,18 +12,19 @@ router.use(requireRole('ADMIN', 'SUPERVISOR'));
 // Simular mensaje del bot (admin-only, sin envío real de WhatsApp)
 router.post('/mensaje', async (req, res, next) => {
   try {
-    const { mensaje, resetear } = req.body;
+    const { mensaje, resetear, telefono } = req.body;
 
     if (!mensaje || !mensaje.trim()) {
       return res.status(400).json({ error: 'Mensaje requerido' });
     }
 
     const inmobiliariaId = req.user.inmobiliariaId;
+    const telefonoSimulado = telefono || 'SIMULADOR_TEST';
 
     // Buscar o crear prospecto de prueba
     let prospecto = await prisma.prospecto.findFirst({
       where: {
-        telefono: 'SIMULADOR_TEST',
+        telefono: telefonoSimulado,
         inmobiliariaId,
       },
       include: { inmobiliaria: true },
@@ -45,7 +46,7 @@ router.post('/mensaje', async (req, res, next) => {
         data: {
           inmobiliariaId,
           nombre: 'Usuario de Prueba',
-          telefono: 'SIMULADOR_TEST',
+          telefono: telefonoSimulado,
           origen: 'Simulador',
           etapa: 'NUEVO',
           calificacion: 'FRIO',
