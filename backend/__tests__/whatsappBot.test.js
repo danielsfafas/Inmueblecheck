@@ -67,7 +67,7 @@ describe('Bot de WhatsApp - Comandos', () => {
 
 describe('Bot de WhatsApp - Pase a ejecutivo humano', () => {
   
-  function debeP asarAHumano(conversacion) {
+  function debePasarAHumano(conversacion) {
     return conversacion.pasadoAHumano === true;
   }
 
@@ -79,7 +79,7 @@ describe('Bot de WhatsApp - Pase a ejecutivo humano', () => {
 
     conversacion.pasadoAHumano = true;
 
-    expect(debeP asarAHumano(conversacion)).toBe(true);
+    expect(debePasarAHumano(conversacion)).toBe(true);
   });
 
   it('debe generar resumen de conversación', () => {

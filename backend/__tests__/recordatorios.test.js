@@ -24,7 +24,7 @@ describe('Sistema de Recordatorios', () => {
     {
       id: '2',
       titulo: 'Seguimiento María',
-      fechaRecordatorio: '2026-11-25T15:00:00Z',
+      fechaRecordatorio: '2026-11-22T15:00:00Z', // Cambiado a 22 para que esté vencido
       completado: false,
     },
     {
