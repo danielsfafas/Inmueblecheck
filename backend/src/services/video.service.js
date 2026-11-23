@@ -23,7 +23,7 @@ export async function generarVideoPropiedad(propiedad, inmobiliaria) {
       return {
         success: true,
         videoPath: outputPath,
-        url: `/videos/propiedad-${propiedad.id}.mp4`,
+        url: `/api/videos/files/propiedad-${propiedad.id}.mp4`,
       };
     }
 
@@ -110,7 +110,7 @@ export async function generarVideoPropiedad(propiedad, inmobiliaria) {
     return {
       success: true,
       videoPath: outputPath,
-      url: `/videos/propiedad-${propiedad.id}.mp4`,
+      url: `/api/videos/files/propiedad-${propiedad.id}.mp4`,
       duration: frames.reduce((sum, f) => sum + f.duration, 0),
       format: 'mp4',
       resolution: '1080x1920',

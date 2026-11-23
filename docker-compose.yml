@@ -46,6 +46,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - videos_data:/app/videos
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +75,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  videos_data:
 
 networks:
   inmueblecheck-network:

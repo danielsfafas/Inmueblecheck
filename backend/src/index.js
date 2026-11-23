@@ -3,8 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Rutas
 import authRoutes from './routes/auth.routes.js';
@@ -41,6 +46,17 @@ app.use(morgan('dev'));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Servir archivos de video estáticamente (sin autenticación para facilitar pruebas)
+// En producción, agregar autenticación o usar nombres únicos
+const videosPath = path.join(__dirname, '..', 'videos');
+app.use('/api/videos/files', express.static(videosPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+    }
+  },
+}));
 
 // Rutas públicas (sin autenticación)
 app.use('/api/public', publicRoutes);

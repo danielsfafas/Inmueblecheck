@@ -48,6 +48,9 @@ Thumbs.db
 backend/uploads/
 frontend/public/uploads/
 
+# Videos generados
+backend/videos/
+
 # Docker
 .dockerignore
 
