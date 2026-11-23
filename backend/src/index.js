@@ -142,6 +142,17 @@ io.on('connection', (socket) => {
   });
 });
 
+// Handlers globales de error para evitar crashes por Baileys
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // No salir del proceso, solo registrar
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // No salir del proceso, solo registrar
+});
+
 // Iniciar sesiones WhatsApp al arrancar
 (async () => {
   try {

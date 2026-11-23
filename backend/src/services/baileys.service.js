@@ -134,86 +134,109 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
     // Event: connection update
     sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update;
+      try {
+        const { connection, lastDisconnect, qr } = update;
 
-      // QR Code generado
-      if (qr) {
-        console.log(`📱 QR generado para ${numeroWhatsappId}`);
-        qrCodes.set(numeroWhatsappId, qr);
+        // QR Code generado
+        if (qr) {
+          console.log(`📱 QR generado para ${numeroWhatsappId}`);
+          qrCodes.set(numeroWhatsappId, qr);
 
-        // Emitir QR por WebSocket
-        if (io) {
-          io.to(`whatsapp-${numeroWhatsappId}`).emit('qr', { numeroId: numeroWhatsappId, qr });
-        }
-
-        // Actualizar estado en BD
-        await prisma.numeroWhatsapp.update({
-          where: { id: numeroWhatsappId },
-          data: { estadoConexion: 'waiting_qr' },
-        });
-      }
-
-      // Conectado exitosamente
-      if (connection === 'open') {
-        console.log(`✅ WhatsApp conectado: ${numeroWhatsappId}`);
-        qrCodes.delete(numeroWhatsappId);
-
-        // Guardar sesión cifrada en BD
-        try {
-          const sessionFiles = {};
-          const files = await fs.readdir(sessionDir);
-          
-          for (const file of files) {
-            const content = await fs.readFile(path.join(sessionDir, file), 'utf-8');
-            sessionFiles[file] = JSON.parse(content);
-          }
-
-          const sessionData = encrypt(JSON.stringify(sessionFiles));
-
-          await prisma.numeroWhatsapp.update({
-            where: { id: numeroWhatsappId },
-            data: {
-              estadoConexion: 'connected',
-              ultimaConexion: new Date(),
-              sessionData,
-            },
-          });
-        } catch (err) {
-          console.error('Error guardando sesión:', err);
-        }
-
-        // Emitir evento por WebSocket
-        if (io) {
-          io.to(`whatsapp-${numeroWhatsappId}`).emit('connected', { numeroId: numeroWhatsappId });
-        }
-      }
-
-      // Desconexión
-      if (connection === 'close') {
-        const shouldReconnect = (lastDisconnect?.error instanceof Boom) &&
-          lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
-
-        console.log(`⚠️  Conexión cerrada para ${numeroWhatsappId}, reconectar:`, shouldReconnect);
-
-        activeSessions.delete(numeroWhatsappId);
-        qrCodes.delete(numeroWhatsappId);
-
-        if (shouldReconnect && numeroWhatsapp.activo) {
-          // Reconexión automática después de 5 segundos
-          setTimeout(() => {
-            console.log(`🔄 Reconectando ${numeroWhatsappId}...`);
-            startBaileysSession(numeroWhatsappId, io);
-          }, 5000);
-        } else {
-          await prisma.numeroWhatsapp.update({
-            where: { id: numeroWhatsappId },
-            data: { estadoConexion: 'disconnected' },
-          });
-
+          // Emitir QR por WebSocket
           if (io) {
-            io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { numeroId: numeroWhatsappId });
+            io.to(`whatsapp-${numeroWhatsappId}`).emit('qr', { numeroId: numeroWhatsappId, qr });
+          }
+
+          // Actualizar estado en BD (usar updateMany para evitar error si fue eliminado)
+          try {
+            await prisma.numeroWhatsapp.updateMany({
+              where: { id: numeroWhatsappId },
+              data: { estadoConexion: 'waiting_qr' },
+            });
+          } catch (err) {
+            console.warn(`No se pudo actualizar estado: ${err.message}`);
           }
         }
+
+        // Conectado exitosamente
+        if (connection === 'open') {
+          console.log(`✅ WhatsApp conectado: ${numeroWhatsappId}`);
+          qrCodes.delete(numeroWhatsappId);
+
+          // Guardar sesión cifrada en BD
+          try {
+            const sessionFiles = {};
+            const files = await fs.readdir(sessionDir);
+            
+            for (const file of files) {
+              const content = await fs.readFile(path.join(sessionDir, file), 'utf-8');
+              sessionFiles[file] = JSON.parse(content);
+            }
+
+            const sessionData = encrypt(JSON.stringify(sessionFiles));
+
+            await prisma.numeroWhatsapp.updateMany({
+              where: { id: numeroWhatsappId },
+              data: {
+                estadoConexion: 'connected',
+                ultimaConexion: new Date(),
+                sessionData,
+              },
+            });
+          } catch (err) {
+            console.error('Error guardando sesión:', err);
+          }
+
+          // Emitir evento por WebSocket
+          if (io) {
+            io.to(`whatsapp-${numeroWhatsappId}`).emit('connected', { numeroId: numeroWhatsappId });
+          }
+        }
+
+        // Desconexión
+        if (connection === 'close') {
+          const shouldReconnect = (lastDisconnect?.error instanceof Boom) &&
+            lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
+
+          console.log(`⚠️  Conexión cerrada para ${numeroWhatsappId}, reconectar:`, shouldReconnect);
+
+          activeSessions.delete(numeroWhatsappId);
+          qrCodes.delete(numeroWhatsappId);
+
+          // Verificar si el número aún existe antes de reconectar/actualizar
+          const exists = await prisma.numeroWhatsapp.findUnique({
+            where: { id: numeroWhatsappId },
+            select: { activo: true },
+          });
+
+          if (!exists) {
+            console.log(`⚠️  Número ${numeroWhatsappId} fue eliminado, no reconectar`);
+            return;
+          }
+
+          if (shouldReconnect && exists.activo) {
+            // Reconexión automática después de 5 segundos
+            setTimeout(() => {
+              console.log(`🔄 Reconectando ${numeroWhatsappId}...`);
+              startBaileysSession(numeroWhatsappId, io);
+            }, 5000);
+          } else {
+            try {
+              await prisma.numeroWhatsapp.updateMany({
+                where: { id: numeroWhatsappId },
+                data: { estadoConexion: 'disconnected' },
+              });
+            } catch (err) {
+              console.warn(`No se pudo actualizar estado: ${err.message}`);
+            }
+
+            if (io) {
+              io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { numeroId: numeroWhatsappId });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error en connection.update para ${numeroWhatsappId}:`, error);
       }
     });
 
@@ -323,28 +346,43 @@ export async function stopBaileysSession(numeroWhatsappId) {
     const session = activeSessions.get(numeroWhatsappId);
     
     if (session) {
-      await session.sock.logout();
+      // 1. Remover todos los listeners ANTES de cerrar
+      session.sock.ev.removeAllListeners();
+      
+      // 2. Logout y cerrar socket
+      try {
+        await session.sock.logout();
+      } catch (err) {
+        console.warn('Error en logout:', err.message);
+      }
+      
+      // 3. Limpiar de memoria
       activeSessions.delete(numeroWhatsappId);
       qrCodes.delete(numeroWhatsappId);
       messageLimits.delete(numeroWhatsappId);
 
-      // Limpiar archivos de sesión
+      // 4. Limpiar archivos de sesión
       const sessionDir = getSessionDir(numeroWhatsappId);
       await fs.rm(sessionDir, { recursive: true, force: true });
 
-      await prisma.numeroWhatsapp.update({
-        where: { id: numeroWhatsappId },
-        data: {
-          estadoConexion: 'disconnected',
-          sessionData: null,
-        },
-      });
+      // 5. Actualizar BD (última operación)
+      try {
+        await prisma.numeroWhatsapp.updateMany({
+          where: { id: numeroWhatsappId },
+          data: {
+            estadoConexion: 'disconnected',
+            sessionData: null,
+          },
+        });
+      } catch (err) {
+        console.warn('No se pudo actualizar BD:', err.message);
+      }
 
       console.log(`✅ Sesión Baileys detenida para ${numeroWhatsappId}`);
     }
   } catch (error) {
     console.error('Error deteniendo sesión:', error);
-    throw error;
+    // No throw para evitar crash
   }
 }
 

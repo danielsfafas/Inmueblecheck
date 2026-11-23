@@ -111,7 +111,7 @@ export default function PropiedadFormModal({ isOpen, onClose, onSuccess, propied
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto pb-24">
           {/* Básicos */}
           <div>
             <h3 className="font-medium mb-3">Información Básica</h3>

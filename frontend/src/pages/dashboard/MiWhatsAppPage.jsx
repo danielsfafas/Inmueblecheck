@@ -61,36 +61,51 @@ export default function MiWhatsAppPage() {
       setQrData(null);
       setModalQROpen(true);
 
-      // Suscribirse a eventos de este número
+      // Limpiar listeners anteriores
+      socket.off('qr');
+      socket.off('connected');
+      socket.off('disconnected');
+
+      // Suscribirse ANTES de llamar /connect
       socket.emit('subscribe-whatsapp', numeroId);
 
-      // Escuchar QR
-      socket.on('qr', (data) => {
+      // Configurar listeners
+      const handleQR = (data) => {
         if (data.numeroId === numeroId) {
-          console.log('📱 QR recibido');
+          console.log('📱 QR recibido via Socket.IO');
           setQrData(data.qr);
         }
-      });
+      };
 
-      // Escuchar conexión exitosa
-      socket.on('connected', (data) => {
+      const handleConnected = (data) => {
         if (data.numeroId === numeroId) {
           toast.success('¡WhatsApp conectado exitosamente!');
           setModalQROpen(false);
           setQrData(null);
           cargarDatos();
+          limpiarListeners();
         }
-      });
+      };
 
-      // Escuchar desconexión
-      socket.on('disconnected', (data) => {
+      const handleDisconnected = (data) => {
         if (data.numeroId === numeroId) {
           toast.error('WhatsApp desconectado');
           setModalQROpen(false);
           setQrData(null);
           cargarDatos();
+          limpiarListeners();
         }
-      });
+      };
+
+      const limpiarListeners = () => {
+        socket.off('qr', handleQR);
+        socket.off('connected', handleConnected);
+        socket.off('disconnected', handleDisconnected);
+      };
+
+      socket.on('qr', handleQR);
+      socket.on('connected', handleConnected);
+      socket.on('disconnected', handleDisconnected);
 
       // Iniciar conexión
       const res = await api.post(`/mi-whatsapp/numeros/${numeroId}/connect`);
@@ -99,7 +114,42 @@ export default function MiWhatsAppPage() {
         toast.success('Ya está conectado');
         setModalQROpen(false);
         cargarDatos();
+        limpiarListeners();
+        return;
       }
+
+      // Polling de respaldo para el QR (cada 3s durante 30s)
+      let attempts = 0;
+      const maxAttempts = 10;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        
+        if (!modalQROpen || qrData || attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          return;
+        }
+
+        try {
+          const qrRes = await api.get(`/mi-whatsapp/numeros/${numeroId}/qr`);
+          if (qrRes.data.qr) {
+            console.log('📱 QR obtenido via polling');
+            setQrData(qrRes.data.qr);
+            clearInterval(pollInterval);
+          }
+        } catch (err) {
+          // QR aún no disponible
+        }
+      }, 3000);
+
+      // Limpiar al cerrar modal
+      const cleanup = () => {
+        clearInterval(pollInterval);
+        limpiarListeners();
+      };
+
+      // Guardar cleanup para usarlo al cerrar
+      window.__qrCleanup = cleanup;
+
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al conectar');
       setModalQROpen(false);
@@ -404,7 +454,13 @@ export default function MiWhatsAppPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Escanea el QR con tu WhatsApp</h3>
               <button
-                onClick={() => setModalQROpen(false)}
+                onClick={() => {
+                  setModalQROpen(false);
+                  if (window.__qrCleanup) {
+                    window.__qrCleanup();
+                    window.__qrCleanup = null;
+                  }
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />

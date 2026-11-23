@@ -29,8 +29,8 @@ export default function ProspectoNuevoModal({ isOpen, onClose, onSuccess }) {
 
   const cargarDatos = async () => {
     try {
-      // Cargar ejecutivos del tenant
-      const usersRes = await api.get('/auth/usuarios');
+      // Cargar usuarios del tenant (ejecutivos)
+      const usersRes = await api.get('/inmobiliaria/usuarios');
       setEjecutivos(usersRes.data || []);
       
       // Cargar propiedades disponibles

@@ -393,4 +393,33 @@ router.post('/:id/intereses', async (req, res, next) => {
   }
 });
 
+// Eliminar prospecto (solo ADMIN)
+router.delete('/:id', requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que el prospecto existe y pertenece al tenant
+    const prospecto = await prisma.prospecto.findFirst({
+      where: {
+        id,
+        inmobiliariaId: req.user.inmobiliariaId,
+      },
+    });
+
+    if (!prospecto) {
+      return res.status(404).json({ error: 'Prospecto no encontrado' });
+    }
+
+    // Prisma maneja cascadas automáticamente (onDelete: Cascade)
+    // Eliminará: conversaciones, mensajes, actividades, consentimientos, intereses, recordatorios
+    await prisma.prospecto.delete({
+      where: { id },
+    });
+
+    res.json({ message: 'Prospecto eliminado' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

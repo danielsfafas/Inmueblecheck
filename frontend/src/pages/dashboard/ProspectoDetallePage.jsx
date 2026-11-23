@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { ArrowLeft, Calendar, MessageCircle, Phone, FileText, Bell, Mail } from 'lucide-react';
+import { ArrowLeft, Calendar, MessageCircle, Phone, FileText, Bell, Mail, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDateTime, getCalificacionColor, getCalificacionLabel, getEtapaColor, getEtapaLabel } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function ProspectoDetallePage() {
   const { id } = useParams();
@@ -105,6 +106,22 @@ export default function ProspectoDetallePage() {
     window.open(`tel:${prospecto.telefono}`);
   };
 
+  const eliminarProspecto = async () => {
+    if (!confirm(`¿Estás seguro de eliminar a ${prospecto.nombre}? Esta acción NO se puede deshacer y eliminará todas sus conversaciones, actividades, recordatorios e intereses.`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/prospectos/${id}`);
+      toast.success('Prospecto eliminado');
+      navigate('/admin/prospectos');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al eliminar prospecto');
+    }
+  };
+
+  const { user } = useAuthStore();
+
   if (loading || !prospecto) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -115,13 +132,26 @@ export default function ProspectoDetallePage() {
 
   return (
     <div>
-      <button
-        onClick={() => navigate('/admin/prospectos')}
-        className="flex items-center mb-6 text-gray-700 hover:text-primary-600"
-      >
-        <ArrowLeft className="w-5 h-5 mr-2" />
-        Volver a prospectos
-      </button>
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={() => navigate('/admin/prospectos')}
+          className="flex items-center text-gray-700 hover:text-primary-600"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Volver a prospectos
+        </button>
+
+        {user?.rol === 'ADMIN' && (
+          <button
+            onClick={eliminarProspecto}
+            className="flex items-center px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            title="Eliminar prospecto"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Eliminar Prospecto
+          </button>
+        )}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Información principal */}
