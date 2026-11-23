@@ -1,7 +1,10 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-# Instalar ffmpeg para generación de videos
-RUN apk add --no-cache ffmpeg
+# Instalar ffmpeg y openssl para Prisma y generación de videos
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -16,4 +19,4 @@ RUN npx prisma generate
 EXPOSE 4311
 
 # Script de inicio que corre migraciones y luego inicia el servidor
-CMD npx prisma migrate deploy && npm run dev
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run dev"]
