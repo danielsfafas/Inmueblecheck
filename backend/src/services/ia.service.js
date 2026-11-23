@@ -63,6 +63,12 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     return `Los requisitos varían según el tipo de operación y financiamiento. En general necesitarás:\n\n• Identificación oficial\n• Comprobante de domicilio\n• Comprobante de ingresos\n\nUn asesor puede darte información más detallada. ¿Te gustaría que te contacte uno? Escribe *AGENTE*.`;
   }
 
+  // Respuestas de saludo
+  if (mensajeNormalizado.includes('hola') || mensajeNormalizado.includes('buenas') || 
+      mensajeNormalizado.includes('buenos días') || mensajeNormalizado.includes('buenas tardes')) {
+    return `¡Hola ${contexto.prospecto.nombre}! 👋 Bienvenido a ${contexto.inmobiliaria.nombre}.\n\nEstoy aquí para ayudarte a encontrar la propiedad ideal para ti. Puedo mostrarte:\n\n🏠 Propiedades disponibles\n💰 Información de precios\n💳 Opciones de financiamiento\n📅 Agendar una visita\n\n¿Qué te gustaría saber?`;
+  }
+
   // Respuesta genérica
   return `Gracias por tu mensaje, ${contexto.prospecto.nombre}. Estoy aquí para ayudarte con información sobre nuestras propiedades.\n\nPuedo ayudarte con:\n• Ver propiedades disponibles\n• Información sobre precios\n• Opciones de financiamiento\n• Agendar una visita\n\n¿Qué te gustaría saber?`;
 }

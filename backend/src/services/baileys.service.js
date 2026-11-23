@@ -21,6 +21,9 @@ const qrCodes = new Map();
 // Store de límites de mensajes: { numeroId: { count, resetTime } }
 const messageLimits = new Map();
 
+// Store de mensajes procesados (deduplicación): { messageId: timestamp }
+const processedMessages = new Map();
+
 const MENSAJE_LIMITE_POR_MINUTO = 30;
 
 const logger = P({ level: 'warn' }); // Solo warnings y errores
@@ -324,37 +327,88 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
       for (const msg of messages) {
         try {
-          // Ignorar grupos, estados y broadcasts (mitigación anti-bloqueo)
-          if (msg.key.remoteJid.endsWith('@g.us')) {
+          // 1. Deduplicación: ignorar mensajes ya procesados (mismo msg.key.id)
+          const messageId = msg.key.id;
+          if (processedMessages.has(messageId)) {
+            console.log(`🔄 Mensaje duplicado (id: ${messageId}), ignorando`);
+            continue;
+          }
+          
+          // Marcar como procesado (TTL 10 minutos)
+          processedMessages.set(messageId, Date.now());
+          setTimeout(() => processedMessages.delete(messageId), 10 * 60 * 1000);
+
+          // 2. Filtrar tipos de mensaje no deseados
+          const remoteJid = msg.key.remoteJid;
+
+          // Ignorar grupos
+          if (remoteJid.endsWith('@g.us')) {
             console.log('🚫 Ignorando mensaje de grupo (anti-bloqueo)');
             continue;
           }
 
-          if (msg.key.remoteJid === 'status@broadcast') {
+          // Ignorar estados
+          if (remoteJid === 'status@broadcast') {
             console.log('🚫 Ignorando estado (anti-bloqueo)');
+            continue;
+          }
+
+          // Ignorar newsletters
+          if (remoteJid.includes('@newsletter')) {
+            console.log('🚫 Ignorando mensaje de newsletter');
+            continue;
+          }
+
+          // Ignorar llamadas (Baileys los marca con messageType call)
+          if (msg.message?.call) {
+            console.log('🚫 Ignorando llamada');
             continue;
           }
 
           // Solo responder a mensajes entrantes directos
           if (!msg.message || msg.key.fromMe) continue;
 
-          const from = msg.key.remoteJid.replace('@s.whatsapp.net', '');
+          // 3. Extraer texto del mensaje
           const text = msg.message.conversation || 
                        msg.message.extendedTextMessage?.text || '';
 
           if (!text) continue;
 
-          console.log(`📩 Mensaje recibido de ${from}: ${text.substring(0, 50)}...`);
+          // 4. Resolver número real desde LID o formato clásico
+          let telefono = null;
+          
+          // WhatsApp ahora usa LID (@lid) en vez de @s.whatsapp.net
+          // Intentar obtener número real desde campos de Baileys:
+          if (remoteJid.includes('@lid')) {
+            // Baileys 7.x: msg.key.participant contiene el PN (phone number) real
+            // O usar pushName/verifiedBizName/remoteJidAlt según disponibilidad
+            telefono = msg.key.participant?.replace('@s.whatsapp.net', '') ||
+                      msg.verifiedBizName ||
+                      msg.pushName;
+            
+            // Si no se puede resolver, guardar el LID completo para tracking
+            if (!telefono || !telefono.match(/^\d+$/)) {
+              telefono = remoteJid; // Guardar LID completo como fallback
+              console.log(`⚠️  No se pudo resolver LID a número E.164, usando LID: ${remoteJid}`);
+            } else {
+              console.log(`✅ LID resuelto: ${remoteJid} → +${telefono}`);
+            }
+          } else {
+            // Formato clásico @s.whatsapp.net
+            telefono = remoteJid.replace('@s.whatsapp.net', '');
+          }
 
-          // Verificar límite de mensajes (anti-spam)
+          console.log(`📩 Mensaje recibido de ${remoteJid}: ${text.substring(0, 50)}...`);
+
+          // 5. Verificar límite de mensajes (anti-spam)
           if (!checkRateLimit(numeroWhatsappId)) {
             console.warn('⚠️  Límite de mensajes alcanzado, ignorando mensaje');
             continue;
           }
 
-          // Procesar con el bot (pasa por lista negra y lógica existente)
-          // phoneNumberId null para Baileys, se usa numeroWhatsappId
-          await procesarMensajeBot(from, text, null, numeroWhatsappId);
+          // 6. Procesar con el bot
+          // Pasar: telefono (E.164 o LID), texto, remoteJid original (para responder), numeroWhatsappId
+          await procesarMensajeBot(telefono, text, null, numeroWhatsappId, remoteJid);
 
         } catch (err) {
           console.error('Error procesando mensaje:', err);
@@ -379,8 +433,12 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
 /**
  * Enviar mensaje por Baileys
+ * @param {string} numeroWhatsappId - ID del número WhatsApp
+ * @param {string} to - Número destino (E.164 sin +) o LID completo
+ * @param {string} text - Texto del mensaje
+ * @param {string} remoteJid - JID original del remitente (para responder correctamente a @lid o @s.whatsapp.net)
  */
-export async function sendBaileysMessage(numeroWhatsappId, to, text) {
+export async function sendBaileysMessage(numeroWhatsappId, to, text, remoteJid = null) {
   try {
     const session = activeSessions.get(numeroWhatsappId);
     
@@ -388,23 +446,36 @@ export async function sendBaileysMessage(numeroWhatsappId, to, text) {
       throw new Error('Sesión no activa');
     }
 
+    // Construir JID de destino
+    let destinoJid;
+    if (remoteJid) {
+      // Usar el JID original del mensaje entrante (puede ser @lid o @s.whatsapp.net)
+      destinoJid = remoteJid;
+    } else if (to.includes('@')) {
+      // Ya viene con el sufijo completo
+      destinoJid = to;
+    } else {
+      // Formato clásico: agregar @s.whatsapp.net
+      destinoJid = `${to}@s.whatsapp.net`;
+    }
+
     // Delay humano antes de enviar (mitigación anti-bloqueo)
     await humanDelay();
 
     // Simular "escribiendo..." (mitigación anti-bloqueo)
-    await session.sock.sendPresenceUpdate('composing', `${to}@s.whatsapp.net`);
+    await session.sock.sendPresenceUpdate('composing', destinoJid);
     
     // Delay adicional mientras "escribe"
     await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
     
-    await session.sock.sendPresenceUpdate('paused', `${to}@s.whatsapp.net`);
+    await session.sock.sendPresenceUpdate('paused', destinoJid);
 
     // Enviar mensaje
-    await session.sock.sendMessage(`${to}@s.whatsapp.net`, {
+    await session.sock.sendMessage(destinoJid, {
       text,
     });
 
-    console.log(`✅ Mensaje enviado a ${to} desde ${numeroWhatsappId}`);
+    console.log(`✅ Mensaje enviado a ${destinoJid} desde ${numeroWhatsappId}`);
     return true;
 
   } catch (error) {

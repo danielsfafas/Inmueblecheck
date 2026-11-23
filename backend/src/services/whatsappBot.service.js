@@ -7,9 +7,9 @@ import {
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 
-export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null) {
+export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null, remoteJid = null) {
   try {
-    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}`);
+    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}${remoteJid ? ` (remoteJid: ${remoteJid})` : ''}`);
 
     // 1. Encontrar número WhatsApp receptor (routing multi-usuario)
     let numeroReceptor = null;
@@ -45,7 +45,7 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
     const bloqueado = await estaEnListaNegra(prisma, numeroReceptor.usuarioId, telefonoNormalizado);
 
     if (bloqueado) {
-      console.log(`🚫 Número ${telefono} está en lista negra del usuario ${numeroReceptor.usuario.nombre} - Bot NO responde`);
+      console.log(`🚫 DECISIÓN: NO responder - Número ${telefono} está en lista negra del usuario ${numeroReceptor.usuario.nombre}`);
       
       // Buscar/crear prospecto para guardar el mensaje (sin responder)
       let prospecto = await prisma.prospecto.findFirst({
@@ -98,7 +98,7 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
       return;
     }
 
-    // 3. Buscar prospecto existente
+    // 3. Buscar o crear prospecto automáticamente
     let prospecto = await prisma.prospecto.findFirst({
       where: {
         telefono: telefonoNormalizado || telefono,
@@ -108,13 +108,29 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
     });
 
     if (!prospecto) {
-      console.log('Prospecto no encontrado, se requiere registro previo');
-      return;
+      console.log(`📝 Prospecto nuevo desde WhatsApp, creando automáticamente...`);
+      
+      // Crear prospecto automáticamente (origen WhatsApp, asignado al dueño del número)
+      prospecto = await prisma.prospecto.create({
+        data: {
+          inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
+          nombre: telefono, // Usamos el teléfono como nombre temporal
+          telefono: telefonoNormalizado || telefono,
+          origen: 'WhatsApp',
+          ejecutivoId: numeroReceptor.usuarioId, // Asignar al dueño del número
+          calificacion: 'SIN_CALIFICAR',
+          etapa: 'NUEVO',
+          noContactar: false,
+        },
+        include: { inmobiliaria: true },
+      });
+
+      console.log(`✅ Prospecto creado automáticamente: ${prospecto.id} - ${telefono}`);
     }
 
     // Verificar si está en lista de no contactar
     if (prospecto.noContactar) {
-      console.log('Prospecto en lista de no contactar');
+      console.log(`🚫 DECISIÓN: NO responder - Prospecto ${prospecto.id} marcado con noContactar=true`);
       return;
     }
 
@@ -143,7 +159,7 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
           prospectoId: prospecto.id,
           numeroWhatsappId: numeroReceptor.id,
           plataforma: 'whatsapp',
-          idExterno: telefono,
+          idExterno: remoteJid || telefono, // Guardar remoteJid (@lid o @s.whatsapp.net)
           atendidoPorBot: true,
           pasadoAHumano: false,
         },
@@ -161,7 +177,8 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      await enviarMensajeWhatsApp(numeroReceptor, telefono, mensajeBienvenida);
+      console.log(`📤 DECISIÓN: Enviar mensaje de bienvenida + aviso privacidad a ${telefono}`);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, mensajeBienvenida, remoteJid);
     }
 
     // Guardar mensaje del prospecto
@@ -214,7 +231,8 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta);
+      console.log(`📤 DECISIÓN: Enviar confirmación de BAJA a ${telefono}`);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta, remoteJid);
       return;
     }
 
@@ -248,7 +266,8 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta);
+      console.log(`📤 DECISIÓN: Enviar confirmación de solicitud AGENTE/HUMANO a ${telefono}`);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta, remoteJid);
       return;
     }
 
@@ -266,7 +285,8 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
       },
     });
 
-    await enviarMensajeWhatsApp(numeroReceptor, telefono, respuestaIA);
+    console.log(`📤 DECISIÓN: Responder con IA (${contexto.inmobiliaria.nombre}) a ${telefono}`);
+    await enviarMensajeWhatsApp(numeroReceptor, telefono, respuestaIA, remoteJid);
 
     // Registrar actividad
     await prisma.actividad.create({
@@ -328,9 +348,9 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
   };
 }
 
-async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje) {
+async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje, remoteJid = null) {
   if (process.env.AI_PROVIDER === 'simulado') {
-    console.log(`[SIMULADO] Enviar desde ${numeroReceptor.numero} a ${telefonoDestino}: ${mensaje}`);
+    console.log(`[SIMULADO] Enviar desde ${numeroReceptor.numero} a ${telefonoDestino}${remoteJid ? ` (JID: ${remoteJid})` : ''}: ${mensaje.substring(0, 100)}...`);
     return;
   }
 
@@ -338,7 +358,7 @@ async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje) {
   if (numeroReceptor.proveedor === 'BAILEYS') {
     // Importación dinámica para evitar ciclos
     const { sendBaileysMessage } = await import('./baileys.service.js');
-    await sendBaileysMessage(numeroReceptor.id, telefonoDestino, mensaje);
+    await sendBaileysMessage(numeroReceptor.id, telefonoDestino, mensaje, remoteJid);
   } else if (numeroReceptor.proveedor === 'META_CLOUD') {
     console.log(`TODO: Enviar con Meta Cloud API desde ${numeroReceptor.phoneNumberId} a ${telefonoDestino}`);
     // Usar numeroReceptor.accessToken y numeroReceptor.phoneNumberId
