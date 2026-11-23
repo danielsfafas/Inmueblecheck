@@ -20,7 +20,7 @@ router.get('/propiedades', async (req, res, next) => {
 
     const where = {
       inmobiliariaId,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
     };
 
     if (tipo) {

@@ -106,8 +106,8 @@ export default function PropiedadesAdminPage() {
                   <div className="text-sm font-medium text-gray-900">{formatCurrency(propiedad.precio)}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(propiedad.estado)}`}>
-                    {getEstadoLabel(propiedad.estado)}
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(propiedad.estadoPropiedad)}`}>
+                    {getEstadoLabel(propiedad.estadoPropiedad)}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">

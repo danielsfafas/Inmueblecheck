@@ -42,8 +42,7 @@ Thumbs.db
 *.swo
 *~
 
-# Prisma
-backend/prisma/migrations/**/*.sql
+# Prisma (mantener migraciones en el repo)
 
 # Uploads
 backend/uploads/

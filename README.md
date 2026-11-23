@@ -43,24 +43,21 @@ Este comando:
 - Construye las imágenes de Docker
 - Levanta PostgreSQL en el puerto 5446
 - Levanta Redis en el puerto 6391
-- Levanta el backend en el puerto 4311
+- Levanta el backend en el puerto 4311 (y ejecuta migraciones automáticamente)
 - Levanta el frontend en el puerto 5191
 
 **Espera aproximadamente 2-3 minutos** la primera vez mientras se descargan las imágenes y se instalan las dependencias.
 
-### 4. Inicializar la base de datos
+### 4. (Opcional) Cargar datos de demostración
 
-En una nueva terminal (mientras Docker Compose está corriendo):
+**⚠️ IMPORTANTE:** Los datos de demostración incluyen contraseñas débiles y solo deben usarse en desarrollo local.
 
 ```bash
 # Entrar al contenedor del backend
 docker exec -it inmueblecheck-backend sh
 
-# Ejecutar migraciones de Prisma
-npx prisma migrate dev
-
-# Ejecutar seed de datos de demostración
-npm run prisma:seed
+# Ejecutar seed (idempotente, se puede correr múltiples veces)
+npm run seed
 
 # Salir del contenedor
 exit
@@ -76,9 +73,11 @@ Una vez que todo esté corriendo:
 
 ## 👤 Credenciales de Demostración
 
+**⚠️ SOLO PARA DESARROLLO LOCAL** - Nunca usar estas contraseñas en producción.
+
 El sistema viene con una inmobiliaria de ejemplo en **Tepeapulco y Ciudad Sahagún, Hidalgo**.
 
-### Usuarios de demostración:
+### Usuarios de demostración (después de correr `npm run seed`):
 
 | Rol | Email | Contraseña | Descripción |
 |-----|-------|------------|-------------|

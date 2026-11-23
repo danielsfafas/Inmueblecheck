@@ -15,7 +15,7 @@ router.get('/', async (req, res, next) => {
       inmobiliariaId: req.user.inmobiliariaId,
     };
 
-    if (estado) where.estado = estado;
+    if (estado) where.estadoPropiedad = estado;
     if (tipo) where.tipo = tipo;
 
     const propiedades = await prisma.propiedad.findMany({

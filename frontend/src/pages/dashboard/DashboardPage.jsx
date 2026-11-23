@@ -34,7 +34,7 @@ export default function DashboardPage() {
           (p) => new Date(p.createdAt) >= hoy
         ).length,
         prospectosCalientes: prospectos.data.filter((p) => p.calificacion === 'CALIENTE').length,
-        propiedadesDisponibles: propiedades.data.filter((p) => p.estado === 'DISPONIBLE').length,
+        propiedadesDisponibles: propiedades.data.filter((p) => p.estadoPropiedad === 'DISPONIBLE').length,
         recordatoriosPendientes: recordatorios.data.length,
       });
     } catch (error) {

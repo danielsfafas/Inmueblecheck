@@ -16,6 +16,7 @@ import recordatorioRoutes from './routes/recordatorio.routes.js';
 import reporteRoutes from './routes/reporte.routes.js';
 import consentimientoRoutes from './routes/consentimiento.routes.js';
 import publicRoutes from './routes/public.routes.js';
+import videoRoutes from './routes/video.routes.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -53,6 +54,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/recordatorios', recordatorioRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/consentimientos', consentimientoRoutes);
+app.use('/api/videos', videoRoutes);
 
 // Middleware de errores
 app.use(errorHandler);

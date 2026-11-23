@@ -4,7 +4,9 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Iniciando seed de datos de demostración...');
+  console.log('🌱 Iniciando seed de datos de demostración (SOLO PARA DESARROLLO)...');
+  console.log('⚠️  Las contraseñas de este seed son débiles y solo para propósitos de desarrollo.');
+  console.log('⚠️  NO USAR EN PRODUCCIÓN.');
 
   // 1. Crear inmobiliaria de ejemplo
   const inmobiliaria = await prisma.inmobiliaria.upsert({
@@ -87,9 +89,9 @@ async function main() {
   });
 
   console.log(`✅ Usuarios creados: Admin, 2 Ejecutivos`);
-  console.log(`   📧 Email: admin@casashidalgo.com.mx | Contraseña: Demo2024!`);
-  console.log(`   📧 Email: maria.lopez@casashidalgo.com.mx | Contraseña: Demo2024!`);
-  console.log(`   📧 Email: carlos.garcia@casashidalgo.com.mx | Contraseña: Demo2024!`);
+  console.log(`   📧 Email: admin@casashidalgo.com.mx | Contraseña: Demo2024! (SOLO DESARROLLO)`);
+  console.log(`   📧 Email: maria.lopez@casashidalgo.com.mx | Contraseña: Demo2024! (SOLO DESARROLLO)`);
+  console.log(`   📧 Email: carlos.garcia@casashidalgo.com.mx | Contraseña: Demo2024! (SOLO DESARROLLO)`);
 
   // 3. Crear propiedades de ejemplo
   const propiedades = [
@@ -115,7 +117,7 @@ async function main() {
       aceptaBancario: true,
       aceptaInfonavit: true,
       aceptaFovissste: false,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/casa1-fachada.jpg',
         '/uploads/propiedades/casa1-sala.jpg',
@@ -143,7 +145,7 @@ async function main() {
       aceptaBancario: false,
       aceptaInfonavit: false,
       aceptaFovissste: false,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/depto1-fachada.jpg',
         '/uploads/propiedades/depto1-sala.jpg'
@@ -171,7 +173,7 @@ async function main() {
       aceptaBancario: true,
       aceptaInfonavit: true,
       aceptaFovissste: true,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/casa2-fachada.jpg',
         '/uploads/propiedades/casa2-sala.jpg',
@@ -203,7 +205,7 @@ async function main() {
       aceptaBancario: true,
       aceptaInfonavit: true,
       aceptaFovissste: false,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/casa3-fachada.jpg',
         '/uploads/propiedades/casa3-jardin.jpg'
@@ -232,7 +234,7 @@ async function main() {
       aceptaBancario: false,
       aceptaInfonavit: false,
       aceptaFovissste: false,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/depto2-sala.jpg',
         '/uploads/propiedades/depto2-recamara.jpg'
@@ -262,7 +264,7 @@ async function main() {
       aceptaBancario: true,
       aceptaInfonavit: false,
       aceptaFovissste: false,
-      estado: 'APARTADA',
+      estadoPropiedad: 'APARTADA',
       fotos: [
         '/uploads/propiedades/casa4-fachada.jpg',
         '/uploads/propiedades/casa4-alberca.jpg',
@@ -292,7 +294,7 @@ async function main() {
       aceptaBancario: false,
       aceptaInfonavit: false,
       aceptaFovissste: false,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
       fotos: [
         '/uploads/propiedades/local1-frente.jpg',
         '/uploads/propiedades/local1-interior.jpg'
@@ -322,7 +324,7 @@ async function main() {
       aceptaBancario: true,
       aceptaInfonavit: false,
       aceptaFovissste: false,
-      estado: 'VENDIDA',
+      estadoPropiedad: 'VENDIDA',
       fotos: [
         '/uploads/propiedades/terreno1.jpg'
       ],

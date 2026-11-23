@@ -131,8 +131,8 @@ model Propiedad {
   aceptaInfonavit       Boolean      @default(false)
   aceptaFovissste       Boolean      @default(false)
   
-  // Estado
-  estado                EstadoPropiedad @default(DISPONIBLE)
+  // Estado de la propiedad
+  estadoPropiedad       EstadoPropiedad @default(DISPONIBLE)
   
   // Medios
   fotos                 String[]
