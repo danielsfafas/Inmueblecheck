@@ -36,6 +36,7 @@ router.post('/webhook', async (req, res) => {
 
     const value = changes[0].value;
     const messages = value.messages;
+    const metadata = value.metadata;
 
     if (!messages || !messages[0]) {
       return;
@@ -44,12 +45,14 @@ router.post('/webhook', async (req, res) => {
     const message = messages[0];
     const from = message.from;
     const text = message.text?.body?.trim();
+    const phoneNumberId = metadata?.phone_number_id;
 
     if (!text) {
       return;
     }
 
-    await procesarMensajeBot(from, text);
+    // Procesar mensaje con routing multi-usuario
+    await procesarMensajeBot(from, text, phoneNumberId);
   } catch (error) {
     console.error('Error en webhook WhatsApp:', error);
   }

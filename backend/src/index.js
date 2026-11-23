@@ -24,6 +24,8 @@ import publicRoutes from './routes/public.routes.js';
 import videoRoutes from './routes/video.routes.js';
 import botSimulatorRoutes from './routes/bot-simulator.routes.js';
 import propiedadVideosRoutes from './routes/propiedad-videos.routes.js';
+import propiedadFotosRoutes from './routes/propiedad-fotos.routes.js';
+import miWhatsappRoutes from './routes/mi-whatsapp.routes.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -87,6 +89,10 @@ app.use('/uploads/videos', express.static(uploadsVideosPath, {
 const seedPhotosPath = path.join(__dirname, '..', 'uploads', 'seed');
 app.use('/uploads/seed', express.static(seedPhotosPath));
 
+// Servir fotos de propiedades
+const propiedadesFotosPath = path.join(__dirname, '..', 'uploads', 'propiedades');
+app.use('/uploads/propiedades', express.static(propiedadesFotosPath));
+
 // Rutas públicas (sin autenticación)
 app.use('/api/public', publicRoutes);
 
@@ -95,8 +101,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/inmobiliaria', inmobiliariaRoutes);
 app.use('/api/propiedades', propiedadRoutes);
 app.use('/api/propiedades', propiedadVideosRoutes); // Rutas de videos de propiedades
+app.use('/api/propiedades', propiedadFotosRoutes); // Rutas de fotos de propiedades
 app.use('/api/prospectos', prospectoRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/mi-whatsapp', miWhatsappRoutes);
 app.use('/api/recordatorios', recordatorioRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/consentimientos', consentimientoRoutes);

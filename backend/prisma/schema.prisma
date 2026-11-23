@@ -70,6 +70,8 @@ model Usuario {
   actividades             Actividad[]
   recordatoriosCreados    Recordatorio[]
   sesiones                Sesion[]
+  numerosWhatsapp         NumeroWhatsapp[]
+  listaNegra              ListaNegra[]
 
   @@unique([inmobiliariaId, email])
   @@index([inmobiliariaId])
@@ -273,22 +275,25 @@ model Interes {
 // CONVERSACIONES Y BOT
 
 model Conversacion {
-  id                String       @id @default(uuid())
+  id                String          @id @default(uuid())
   inmobiliariaId    String
-  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
   
   prospectoId       String
-  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  prospecto         Prospecto       @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
   
-  plataforma        String       @default("whatsapp")
+  numeroWhatsappId  String?
+  numeroWhatsapp    NumeroWhatsapp? @relation(fields: [numeroWhatsappId], references: [id], onDelete: SetNull)
+  
+  plataforma        String          @default("whatsapp")
   idExterno         String?
   
-  atendidoPorBot    Boolean      @default(true)
-  pasadoAHumano     Boolean      @default(false)
-  resumenBot        String?      @db.Text
+  atendidoPorBot    Boolean         @default(true)
+  pasadoAHumano     Boolean         @default(false)
+  resumenBot        String?         @db.Text
   
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   
   // Relaciones
   mensajes          Mensaje[]
@@ -296,6 +301,7 @@ model Conversacion {
   @@index([inmobiliariaId])
   @@index([prospectoId])
   @@index([idExterno])
+  @@index([numeroWhatsappId])
 }
 
 model Mensaje {
@@ -417,4 +423,64 @@ enum AccionConsentimiento {
   OTORGA
   REVOCA
   BAJA
+}
+
+// WHATSAPP MULTI-USUARIO
+
+model NumeroWhatsapp {
+  id                String              @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  nombre            String              // Etiqueta descriptiva (ej: "Mi WhatsApp Personal")
+  numero            String              @unique // Formato E.164: +5215512345678
+  proveedor         ProveedorWhatsapp   @default(WHATSAPP_WEB_JS)
+  
+  // Credenciales según proveedor
+  phoneNumberId     String?             // Para META_CLOUD
+  accessToken       String?             // Para META_CLOUD / TWILIO (cifrado)
+  sessionData       String?             @db.Text // Para WHATSAPP_WEB_JS / BAILEYS (sesión serializada, cifrada)
+  
+  activo            Boolean             @default(true)
+  estadoConexion    String?             @default("disconnected") // disconnected, connecting, connected, error
+  ultimaConexion    DateTime?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relaciones
+  conversaciones    Conversacion[]
+  listaNegra        ListaNegra[]
+  
+  @@index([usuarioId])
+  @@index([numero])
+  @@index([phoneNumberId])
+}
+
+enum ProveedorWhatsapp {
+  META_CLOUD          // Meta Cloud API (empresa)
+  WHATSAPP_WEB_JS     // whatsapp-web.js (QR, riesgo ban)
+  BAILEYS             // Baileys (multidevice, riesgo ban)
+  TWILIO              // Twilio WhatsApp API
+}
+
+model ListaNegra {
+  id                String          @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  numeroWhatsappId  String?
+  numeroWhatsapp    NumeroWhatsapp? @relation(fields: [numeroWhatsappId], references: [id], onDelete: SetNull)
+  
+  numeroRemitente   String          // Número del remitente a bloquear (normalizado E.164)
+  nombreContacto    String?         // Nombre opcional
+  nota              String?         // Nota del usuario
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([usuarioId, numeroRemitente])
+  @@index([usuarioId])
+  @@index([numeroWhatsappId])
+  @@index([numeroRemitente])
 }

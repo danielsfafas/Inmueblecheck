@@ -6,6 +6,100 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
+// Crear prospecto
+router.post('/', async (req, res, next) => {
+  try {
+    const {
+      nombre,
+      telefono,
+      email,
+      presupuesto,
+      formaPago,
+      origen,
+      etapa,
+      ejecutivoId,
+      notas,
+      propiedadesInteres,
+    } = req.body;
+
+    if (!nombre || !telefono) {
+      return res.status(400).json({ error: 'Nombre y teléfono son obligatorios' });
+    }
+
+    // Verificar que el ejecutivo asignado pertenece a la misma inmobiliaria
+    if (ejecutivoId) {
+      const ejecutivo = await prisma.usuario.findFirst({
+        where: {
+          id: ejecutivoId,
+          inmobiliariaId: req.user.inmobiliariaId,
+        },
+      });
+
+      if (!ejecutivo) {
+        return res.status(400).json({ error: 'Ejecutivo no válido' });
+      }
+    }
+
+    // Crear prospecto
+    const prospecto = await prisma.prospecto.create({
+      data: {
+        inmobiliariaId: req.user.inmobiliariaId,
+        nombre,
+        telefono,
+        email: email || null,
+        presupuesto: presupuesto ? parseFloat(presupuesto) : null,
+        formaPago: formaPago || null,
+        origen: origen || 'Manual - Panel Admin',
+        etapa: etapa || 'NUEVO',
+        ejecutivoId: ejecutivoId || null,
+      },
+    });
+
+    // Registrar consentimiento de alta manual
+    await prisma.consentimiento.create({
+      data: {
+        inmobiliariaId: req.user.inmobiliariaId,
+        prospectoId: prospecto.id,
+        titular: nombre,
+        tipo: 'AVISO_PRIVACIDAD',
+        accion: 'OTORGA',
+        versionDocumento: '1.0',
+        textoHash: 'manual_admin',
+        canal: 'panel_admin',
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+      },
+    });
+
+    // Registrar actividad de creación
+    await prisma.actividad.create({
+      data: {
+        inmobiliariaId: req.user.inmobiliariaId,
+        prospectoId: prospecto.id,
+        usuarioId: req.user.id,
+        tipo: 'NOTA',
+        titulo: 'Prospecto creado desde panel admin',
+        descripcion: notas || 'Creado manualmente por ' + req.user.nombre,
+      },
+    });
+
+    // Crear intereses en propiedades si se proporcionaron
+    if (propiedadesInteres && Array.isArray(propiedadesInteres) && propiedadesInteres.length > 0) {
+      await prisma.interes.createMany({
+        data: propiedadesInteres.map(propiedadId => ({
+          prospectoId: prospecto.id,
+          propiedadId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    res.status(201).json(prospecto);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Listar prospectos
 router.get('/', async (req, res, next) => {
   try {

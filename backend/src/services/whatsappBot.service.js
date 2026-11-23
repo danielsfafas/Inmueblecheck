@@ -1,14 +1,93 @@
 import { prisma, redis } from '../index.js';
 import { generarRespuestaIA } from './ia.service.js';
 import { generarMensajeBienvenida } from '../utils/botMessages.js';
+import {
+  encontrarNumeroPorPhoneNumberId,
+  estaEnListaNegra,
+  normalizarNumeroE164,
+} from '../utils/whatsapp-multiusuario.js';
 
-export async function procesarMensajeBot(telefono, mensaje) {
+export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null) {
   try {
-    console.log(`📱 Mensaje de ${telefono}: ${mensaje}`);
+    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}`);
 
-    // Buscar prospecto existente
+    // 1. Encontrar número WhatsApp receptor (routing multi-usuario)
+    let numeroReceptor = null;
+    if (phoneNumberId) {
+      numeroReceptor = await encontrarNumeroPorPhoneNumberId(prisma, phoneNumberId);
+    }
+
+    if (!numeroReceptor) {
+      console.log('⚠️ Número receptor no encontrado o inactivo');
+      return;
+    }
+
+    console.log(`📞 Número receptor: ${numeroReceptor.nombre} (${numeroReceptor.numero}) - Usuario: ${numeroReceptor.usuario.nombre}`);
+
+    // 2. Verificar lista negra del dueño del número receptor
+    const telefonoNormalizado = normalizarNumeroE164(telefono);
+    const bloqueado = await estaEnListaNegra(prisma, numeroReceptor.usuarioId, telefonoNormalizado);
+
+    if (bloqueado) {
+      console.log(`🚫 Número ${telefono} está en lista negra del usuario ${numeroReceptor.usuario.nombre} - Bot NO responde`);
+      
+      // Buscar/crear prospecto para guardar el mensaje (sin responder)
+      let prospecto = await prisma.prospecto.findFirst({
+        where: {
+          telefono: telefonoNormalizado || telefono,
+          inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
+        },
+        include: { inmobiliaria: true },
+      });
+
+      if (!prospecto) {
+        console.log('Prospecto no encontrado y está en lista negra - mensaje ignorado');
+        return;
+      }
+
+      // Buscar o crear conversación
+      let conversacion = await prisma.conversacion.findFirst({
+        where: {
+          prospectoId: prospecto.id,
+          numeroWhatsappId: numeroReceptor.id,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!conversacion) {
+        conversacion = await prisma.conversacion.create({
+          data: {
+            inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
+            prospectoId: prospecto.id,
+            numeroWhatsappId: numeroReceptor.id,
+            plataforma: 'whatsapp',
+            idExterno: telefono,
+            atendidoPorBot: false, // Marcado como no atendido por bot (lista negra)
+            pasadoAHumano: true, // Pasa directo a humano
+          },
+        });
+      }
+
+      // Guardar mensaje del cliente (sin respuesta del bot)
+      await prisma.mensaje.create({
+        data: {
+          conversacionId: conversacion.id,
+          remitente: telefono,
+          contenido: mensaje,
+          esBot: false,
+        },
+      });
+
+      console.log('✅ Mensaje guardado (lista negra - sin respuesta de bot)');
+      return;
+    }
+
+    // 3. Buscar prospecto existente
     let prospecto = await prisma.prospecto.findFirst({
-      where: { telefono },
+      where: {
+        telefono: telefonoNormalizado || telefono,
+        inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
+      },
       include: { inmobiliaria: true },
     });
 
@@ -23,10 +102,11 @@ export async function procesarMensajeBot(telefono, mensaje) {
       return;
     }
 
-    // Buscar conversación activa (no pasada a humano, ni dado de baja)
+    // Buscar conversación activa (no pasada a humano, del mismo número WhatsApp receptor)
     let conversacion = await prisma.conversacion.findFirst({
       where: {
         prospectoId: prospecto.id,
+        numeroWhatsappId: numeroReceptor.id,
         pasadoAHumano: false,
       },
       orderBy: { createdAt: 'desc' },
@@ -45,6 +125,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
         data: {
           inmobiliariaId: prospecto.inmobiliariaId,
           prospectoId: prospecto.id,
+          numeroWhatsappId: numeroReceptor.id,
           plataforma: 'whatsapp',
           idExterno: telefono,
           atendidoPorBot: true,
@@ -64,7 +145,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
         },
       });
 
-      await enviarMensajeWhatsApp(telefono, mensajeBienvenida);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, mensajeBienvenida);
     }
 
     // Guardar mensaje del prospecto
@@ -117,7 +198,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
         },
       });
 
-      await enviarMensajeWhatsApp(telefono, respuesta);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta);
       return;
     }
 
@@ -151,7 +232,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
         },
       });
 
-      await enviarMensajeWhatsApp(telefono, respuesta);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta);
       return;
     }
 
@@ -169,7 +250,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
       },
     });
 
-    await enviarMensajeWhatsApp(telefono, respuestaIA);
+    await enviarMensajeWhatsApp(numeroReceptor, telefono, respuestaIA);
 
     // Registrar actividad
     await prisma.actividad.create({
@@ -231,12 +312,21 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
   };
 }
 
-async function enviarMensajeWhatsApp(telefono, mensaje) {
-  if (process.env.AI_PROVIDER === 'simulado' || !process.env.WHATSAPP_ACCESS_TOKEN) {
-    console.log(`[SIMULADO] Enviar a ${telefono}: ${mensaje}`);
+async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje) {
+  if (process.env.AI_PROVIDER === 'simulado' || !numeroReceptor.accessToken) {
+    console.log(`[SIMULADO] Enviar desde ${numeroReceptor.numero} a ${telefonoDestino}: ${mensaje}`);
     return;
   }
 
-  // Implementación real con Meta WhatsApp Cloud API
-  console.log(`TODO: Enviar mensaje real a ${telefono}`);
+  // Implementación real según proveedor
+  if (numeroReceptor.proveedor === 'META_CLOUD') {
+    console.log(`TODO: Enviar con Meta Cloud API desde ${numeroReceptor.phoneNumberId} a ${telefonoDestino}`);
+    // Usar numeroReceptor.accessToken y numeroReceptor.phoneNumberId
+  } else if (numeroReceptor.proveedor === 'WHATSAPP_WEB_JS') {
+    console.log(`TODO: Enviar con whatsapp-web.js desde ${numeroReceptor.numero} a ${telefonoDestino}`);
+    // Usar numeroReceptor.sessionData
+  } else if (numeroReceptor.proveedor === 'TWILIO') {
+    console.log(`TODO: Enviar con Twilio desde ${numeroReceptor.numero} a ${telefonoDestino}`);
+    // Usar numeroReceptor.accessToken (Account SID + Auth Token)
+  }
 }
