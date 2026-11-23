@@ -147,6 +147,43 @@ export default function PropiedadDetallePage() {
               <p className="text-gray-700 whitespace-pre-line">{propiedad.descripcion}</p>
             </div>
 
+            {/* Videos */}
+            {propiedad.videos && propiedad.videos.length > 0 && (
+              <div className="p-6 mb-6 bg-white rounded-lg shadow">
+                <h2 className="mb-4 text-xl font-bold text-gray-900">Videos</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {propiedad.videos.map((video) => (
+                    <div key={video.id} className="overflow-hidden rounded-lg">
+                      {video.tipo === 'YOUTUBE' ? (
+                        <iframe
+                          src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}`}
+                          loading="lazy"
+                          className={
+                            video.youtubeId && video.youtubeId.length === 11 && 
+                            (typeof video.archivoUrl === 'string' && video.archivoUrl.includes('/shorts/'))
+                              ? 'w-full aspect-[9/16] max-h-[600px] mx-auto'
+                              : 'w-full aspect-video'
+                          }
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video
+                          controls
+                          preload="metadata"
+                          playsInline
+                          className="w-full rounded-lg"
+                          src={video.archivoUrl}
+                        >
+                          Tu navegador no soporta video HTML5.
+                        </video>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Opciones de pago */}
             {propiedad.tipo === 'VENTA' && (
               <div className="p-6 bg-white rounded-lg shadow">

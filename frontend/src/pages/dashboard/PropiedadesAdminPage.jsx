@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Plus, Eye, Video } from 'lucide-react';
+import { Plus, Eye, Video, Film } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import VideoManager from '../../components/VideoManager';
 
 export default function PropiedadesAdminPage() {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [videoManagerOpen, setVideoManagerOpen] = useState(false);
+  const [selectedPropiedadId, setSelectedPropiedadId] = useState(null);
 
   useEffect(() => {
     cargarPropiedades();
@@ -164,14 +167,27 @@ export default function PropiedadesAdminPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <button
-                    onClick={() => generarVideo(propiedad.id)}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-purple-600 rounded-lg hover:bg-purple-700"
-                    title="Generar video vertical 9:16"
-                  >
-                    <Video className="w-4 h-4 mr-2" />
-                    Generar Video
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => generarVideo(propiedad.id)}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-purple-600 rounded-lg hover:bg-purple-700"
+                      title="Generar video vertical 9:16"
+                    >
+                      <Video className="w-4 h-4 mr-2" />
+                      Generar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPropiedadId(propiedad.id);
+                        setVideoManagerOpen(true);
+                      }}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                      title="Gestionar videos de la propiedad"
+                    >
+                      <Film className="w-4 h-4 mr-2" />
+                      Videos
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -184,6 +200,17 @@ export default function PropiedadesAdminPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de gestión de videos */}
+      {videoManagerOpen && selectedPropiedadId && (
+        <VideoManager
+          propiedadId={selectedPropiedadId}
+          onClose={() => {
+            setVideoManagerOpen(false);
+            setSelectedPropiedadId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
