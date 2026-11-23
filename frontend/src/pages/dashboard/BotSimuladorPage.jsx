@@ -36,7 +36,7 @@ export default function BotSimuladorPage() {
 
       // El backend retorna un array 'respuestas' que puede contener múltiples mensajes
       // (ej. mensaje de bienvenida + respuesta en primera interacción)
-      const nuevosmensajes = (data.respuestas || [data.respuesta]).map((contenido, index) => ({
+      const nuevosMensajes = (data.respuestas || [data.respuesta]).map((contenido, index) => ({
         id: mensajes.length + index + 1,
         esBot: true,
         contenido,
