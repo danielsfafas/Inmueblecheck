@@ -39,7 +39,9 @@ export default function PropiedadesAdminPage() {
       toast.loading('Descargando video...', { id: 'video-gen' });
 
       // 2. GET al video.url con blob response
-      const videoUrl = result.video.url; // /api/videos/files/propiedad-<id>.mp4
+      // El backend retorna '/api/videos/files/...' pero api.js ya tiene baseURL '/api'
+      // Quitamos el prefijo '/api' para evitar duplicación: /api/api/videos/files/...
+      const videoUrl = result.video.url.replace(/^\/api/, ''); // videos/files/propiedad-<id>.mp4
       const response = await api.get(videoUrl, {
         responseType: 'blob',
       });
