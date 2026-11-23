@@ -4,14 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function BotSimuladorPage() {
-  const [mensajes, setMensajes] = useState([
-    {
-      id: 1,
-      esBot: true,
-      contenido: '¡Hola! Soy el asistente virtual de Casas Hidalgo. ¿En qué puedo ayudarte hoy? Puedo mostrarte propiedades disponibles, responder tus dudas o conectarte con un ejecutivo.',
-      timestamp: new Date(),
-    },
-  ]);
+  const [mensajes, setMensajes] = useState([]);
   const [inputMensaje, setInputMensaje] = useState('');
   const [cargando, setCargando] = useState(false);
   const [prospectoSimulado] = useState({
@@ -41,17 +34,18 @@ export default function BotSimuladorPage() {
         mensaje: mensajeEnviado,
       });
 
-      setMensajes((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          esBot: true,
-          contenido: data.respuesta,
-          timestamp: new Date(),
-          pasadoAHumano: data.pasadoAHumano,
-          dadoDeBaja: data.dadoDeBaja,
-        },
-      ]);
+      // El backend retorna un array 'respuestas' que puede contener múltiples mensajes
+      // (ej. mensaje de bienvenida + respuesta en primera interacción)
+      const nuevosmensajes = (data.respuestas || [data.respuesta]).map((contenido, index) => ({
+        id: mensajes.length + index + 1,
+        esBot: true,
+        contenido,
+        timestamp: new Date(),
+        pasadoAHumano: data.pasadoAHumano,
+        dadoDeBaja: data.dadoDeBaja,
+      }));
+
+      setMensajes((prev) => [...prev, ...nuevosMensajes]);
 
       if (data.pasadoAHumano) {
         toast.success('✅ Pase a ejecutivo registrado en el sistema');

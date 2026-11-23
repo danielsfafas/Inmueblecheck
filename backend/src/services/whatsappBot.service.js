@@ -1,5 +1,6 @@
 import { prisma, redis } from '../index.js';
 import { generarRespuestaIA } from './ia.service.js';
+import { generarMensajeBienvenida } from '../utils/botMessages.js';
 
 export async function procesarMensajeBot(telefono, mensaje) {
   try {
@@ -52,11 +53,7 @@ export async function procesarMensajeBot(telefono, mensaje) {
       });
 
       // Primer mensaje del bot CON DIVULGACIÓN DE IA (requisito legal)
-      const mensajeBienvenida = `¡Hola! Soy el asistente virtual de ${prospecto.inmobiliaria.nombre}. 🤖\n\n` +
-        `Soy un sistema automatizado impulsado por inteligencia artificial. ` +
-        `Puedo ayudarte con información sobre propiedades, opciones de crédito y más.\n\n` +
-        `¿En qué puedo ayudarte hoy?\n\n` +
-        `💡 Escribe AGENTE para hablar con una persona o BAJA para no recibir más mensajes.`;
+      const mensajeBienvenida = generarMensajeBienvenida(prospecto.inmobiliaria.nombre);
       
       await prisma.mensaje.create({
         data: {

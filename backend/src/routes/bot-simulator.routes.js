@@ -1,6 +1,7 @@
 import express from 'express';
 import { prisma } from '../index.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { generarMensajeBienvenida } from '../utils/botMessages.js';
 
 const router = express.Router();
 
@@ -87,11 +88,8 @@ router.post('/mensaje', async (req, res, next) => {
         },
       });
 
-      // Mensaje de bienvenida con divulgación de IA
-      const mensajeBienvenida = `¡Hola! Soy el asistente virtual de ${prospecto.inmobiliaria.nombre}. 🤖\n\n` +
-        `Soy un sistema automatizado impulsado por inteligencia artificial. ` +
-        `Puedo ayudarte con información sobre propiedades, opciones de crédito y más.\n\n` +
-        `¿En qué puedo ayudarte hoy? O escribe AGENTE para hablar con una persona.`;
+      // Mensaje de bienvenida con divulgación de IA (requisito legal)
+      const mensajeBienvenida = generarMensajeBienvenida(prospecto.inmobiliaria.nombre);
 
       await prisma.mensaje.create({
         data: {
@@ -209,9 +207,15 @@ router.post('/mensaje', async (req, res, next) => {
       },
     });
 
+    // En primera interacción, enviar tanto el mensaje de bienvenida como la respuesta
+    const respuestas = esPrimeraInteraccion
+      ? [generarMensajeBienvenida(prospecto.inmobiliaria.nombre), respuestaBot]
+      : [respuestaBot];
+
     res.json({
       success: true,
-      respuesta: respuestaBot,
+      respuesta: respuestaBot, // mantener para backward compatibility
+      respuestas, // array de mensajes a mostrar
       pasadoAHumano,
       dadoDeBaja,
       esPrimeraInteraccion,
