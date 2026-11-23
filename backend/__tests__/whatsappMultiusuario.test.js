@@ -31,28 +31,28 @@ describe('WhatsApp Multi-Usuario', () => {
   });
 
   describe('enmascarCredenciales', () => {
-    it('debe enmascarar accessToken', () => {
+    it('debe enmascarar accessToken cifrado', () => {
       const numero = {
         id: '123',
         nombre: 'Mi WhatsApp',
         numero: '+525512345678',
-        accessToken: 'EAAD1234567890abcdef',
+        accessToken: 'abc123:def456:encrypted_data_here',
         sessionData: null,
       };
 
       const resultado = enmascarCredenciales(numero);
 
-      expect(resultado.accessToken).toBe('****cdef');
+      expect(resultado.accessToken).toBe('[ENCRYPTED]');
       expect(resultado.sessionData).toBeNull();
     });
 
-    it('debe enmascarar sessionData', () => {
+    it('debe enmascarar sessionData cifrada', () => {
       const numero = {
         id: '123',
         nombre: 'Mi WhatsApp',
         numero: '+525512345678',
         accessToken: null,
-        sessionData: JSON.stringify({ session: 'data' }),
+        sessionData: 'abc123:def456:encrypted_session_data',
       };
 
       const resultado = enmascarCredenciales(numero);

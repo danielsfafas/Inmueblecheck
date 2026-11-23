@@ -20,6 +20,7 @@ import RecordatoriosPage from './pages/dashboard/RecordatoriosPage';
 import ReportesPage from './pages/dashboard/ReportesPage';
 import ConfiguracionPage from './pages/dashboard/ConfiguracionPage';
 import BotSimuladorPage from './pages/dashboard/BotSimuladorPage';
+import MiWhatsAppPage from './pages/dashboard/MiWhatsAppPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
@@ -57,6 +58,7 @@ function App() {
         <Route path="prospectos/:id" element={<ProspectoDetallePage />} />
         <Route path="propiedades" element={<PropiedadesAdminPage />} />
         <Route path="recordatorios" element={<RecordatoriosPage />} />
+        <Route path="mi-whatsapp" element={<MiWhatsAppPage />} />
         <Route path="reportes" element={<ReportesPage />} />
         <Route path="bot-simulador" element={<BotSimuladorPage />} />
         <Route path="configuracion" element={<ConfiguracionPage />} />

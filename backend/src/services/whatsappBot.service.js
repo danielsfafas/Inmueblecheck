@@ -7,14 +7,30 @@ import {
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 
-export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null) {
+export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null) {
   try {
-    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}`);
+    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}`);
 
     // 1. Encontrar número WhatsApp receptor (routing multi-usuario)
     let numeroReceptor = null;
+    
+    // Meta Cloud API usa phoneNumberId
     if (phoneNumberId) {
       numeroReceptor = await encontrarNumeroPorPhoneNumberId(prisma, phoneNumberId);
+    }
+    
+    // Baileys/otros usan numeroWhatsappId directamente
+    if (!numeroReceptor && numeroWhatsappId) {
+      numeroReceptor = await prisma.numeroWhatsapp.findUnique({
+        where: { id: numeroWhatsappId },
+        include: {
+          usuario: {
+            include: {
+              inmobiliaria: true,
+            },
+          },
+        },
+      });
     }
 
     if (!numeroReceptor) {
@@ -313,13 +329,17 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
 }
 
 async function enviarMensajeWhatsApp(numeroReceptor, telefonoDestino, mensaje) {
-  if (process.env.AI_PROVIDER === 'simulado' || !numeroReceptor.accessToken) {
+  if (process.env.AI_PROVIDER === 'simulado') {
     console.log(`[SIMULADO] Enviar desde ${numeroReceptor.numero} a ${telefonoDestino}: ${mensaje}`);
     return;
   }
 
   // Implementación real según proveedor
-  if (numeroReceptor.proveedor === 'META_CLOUD') {
+  if (numeroReceptor.proveedor === 'BAILEYS') {
+    // Importación dinámica para evitar ciclos
+    const { sendBaileysMessage } = await import('./baileys.service.js');
+    await sendBaileysMessage(numeroReceptor.id, telefonoDestino, mensaje);
+  } else if (numeroReceptor.proveedor === 'META_CLOUD') {
     console.log(`TODO: Enviar con Meta Cloud API desde ${numeroReceptor.phoneNumberId} a ${telefonoDestino}`);
     // Usar numeroReceptor.accessToken y numeroReceptor.phoneNumberId
   } else if (numeroReceptor.proveedor === 'WHATSAPP_WEB_JS') {

@@ -41,12 +41,14 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev_jwt_secret_change_in_production
       PORT: 4311
+      FRONTEND_URL: http://localhost:5191
     ports:
       - "4311:4311"
     volumes:
       - ./backend:/app
       - /app/node_modules
       - videos_data:/app/videos
+      - whatsapp_sessions:/app/sessions
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +78,7 @@ volumes:
   postgres_data:
   redis_data:
   videos_data:
+  whatsapp_sessions:
 
 networks:
   inmueblecheck-network:

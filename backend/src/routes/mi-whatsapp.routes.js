@@ -1,7 +1,14 @@
 import express from 'express';
-import { prisma } from '../index.js';
+import { prisma, io } from '../index.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { normalizarNumeroE164, enmascarCredenciales } from '../utils/whatsapp-multiusuario.js';
+import { encrypt } from '../utils/encryption.js';
+import {
+  startBaileysSession,
+  stopBaileysSession,
+  getQRCode,
+  getActiveSession,
+} from '../services/baileys.service.js';
 
 const router = express.Router();
 
@@ -66,7 +73,7 @@ router.post('/numeros', async (req, res, next) => {
       return res.status(400).json({ error: 'TWILIO requiere accessToken' });
     }
 
-    // Crear número
+    // Crear número (cifrar credenciales)
     const nuevoNumero = await prisma.numeroWhatsapp.create({
       data: {
         usuarioId: req.user.id,
@@ -74,8 +81,8 @@ router.post('/numeros', async (req, res, next) => {
         numero: numeroNormalizado,
         proveedor,
         phoneNumberId: phoneNumberId || null,
-        accessToken: accessToken || null, // TODO: Cifrar en producción
-        sessionData: sessionData || null, // TODO: Cifrar en producción
+        accessToken: accessToken ? encrypt(accessToken) : null,
+        sessionData: sessionData ? encrypt(sessionData) : null,
         estadoConexion: 'disconnected',
       },
     });
@@ -107,7 +114,7 @@ router.patch('/numeros/:id/conexion', async (req, res, next) => {
       where: { id },
       data: {
         estadoConexion: estadoConexion || numero.estadoConexion,
-        sessionData: sessionData || numero.sessionData,
+        sessionData: sessionData ? encrypt(sessionData) : numero.sessionData,
         ultimaConexion: estadoConexion === 'connected' ? new Date() : numero.ultimaConexion,
       },
     });
@@ -166,11 +173,117 @@ router.delete('/numeros/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Número no encontrado' });
     }
 
+    // Desconectar sesión si está activa
+    if (numero.proveedor === 'BAILEYS') {
+      try {
+        await stopBaileysSession(id);
+      } catch (err) {
+        console.warn('Error deteniendo sesión:', err);
+      }
+    }
+
     await prisma.numeroWhatsapp.delete({
       where: { id },
     });
 
     res.json({ message: 'Número eliminado' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// BAILEYS - Conectar número (iniciar sesión y obtener QR)
+router.post('/numeros/:id/connect', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const numero = await prisma.numeroWhatsapp.findFirst({
+      where: {
+        id,
+        usuarioId: req.user.id,
+      },
+    });
+
+    if (!numero) {
+      return res.status(404).json({ error: 'Número no encontrado' });
+    }
+
+    if (numero.proveedor !== 'BAILEYS') {
+      return res.status(400).json({ error: 'Solo disponible para Baileys' });
+    }
+
+    // Verificar si ya hay sesión activa
+    const session = getActiveSession(id);
+    if (session) {
+      return res.json({
+        message: 'Sesión ya activa',
+        estadoConexion: 'connected',
+      });
+    }
+
+    // Iniciar sesión (generará QR)
+    await startBaileysSession(id, io);
+
+    res.json({
+      message: 'Conexión iniciada, escanea el QR',
+      estadoConexion: 'waiting_qr',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// BAILEYS - Desconectar número
+router.post('/numeros/:id/disconnect', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const numero = await prisma.numeroWhatsapp.findFirst({
+      where: {
+        id,
+        usuarioId: req.user.id,
+      },
+    });
+
+    if (!numero) {
+      return res.status(404).json({ error: 'Número no encontrado' });
+    }
+
+    if (numero.proveedor !== 'BAILEYS') {
+      return res.status(400).json({ error: 'Solo disponible para Baileys' });
+    }
+
+    await stopBaileysSession(id);
+
+    res.json({ message: 'Sesión desconectada' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// BAILEYS - Obtener QR actual
+router.get('/numeros/:id/qr', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const numero = await prisma.numeroWhatsapp.findFirst({
+      where: {
+        id,
+        usuarioId: req.user.id,
+      },
+    });
+
+    if (!numero) {
+      return res.status(404).json({ error: 'Número no encontrado' });
+    }
+
+    const qr = getQRCode(id);
+
+    if (!qr) {
+      return res.status(404).json({ error: 'QR no disponible' });
+    }
+
+    res.json({ qr });
   } catch (error) {
     next(error);
   }

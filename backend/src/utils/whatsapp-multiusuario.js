@@ -48,9 +48,10 @@ export function enmascarCredenciales(numeroWhatsapp) {
 
   const { accessToken, sessionData, ...resto } = numeroWhatsapp;
 
+  // Para credenciales cifradas, solo mostrar que existen
   return {
     ...resto,
-    accessToken: accessToken ? '****' + accessToken.slice(-4) : null,
+    accessToken: accessToken ? '[ENCRYPTED]' : null,
     sessionData: sessionData ? '[ENCRYPTED]' : null,
   };
 }

@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  Bot
+  Bot,
+  Smartphone
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Prospectos', href: '/admin/prospectos', icon: Users },
   { name: 'Propiedades', href: '/admin/propiedades', icon: Building2 },
   { name: 'Recordatorios', href: '/admin/recordatorios', icon: Bell },
+  { name: 'Mi WhatsApp', href: '/admin/mi-whatsapp', icon: Smartphone },
   { name: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
   { name: 'Simulador Bot', href: '/admin/bot-simulador', icon: Bot },
   { name: 'Configuración', href: '/admin/configuracion', icon: Settings },

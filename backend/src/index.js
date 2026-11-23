@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -31,6 +33,15 @@ import miWhatsappRoutes from './routes/mi-whatsapp.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5191',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
 const PORT = process.env.PORT || 4311;
 
 // Inicializar Prisma
@@ -38,6 +49,9 @@ export const prisma = new PrismaClient();
 
 // Inicializar Redis
 export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6391');
+
+// Exportar io para usar en servicios
+export { io };
 
 // Middleware
 app.use(helmet({
@@ -114,16 +128,42 @@ app.use('/api/bot-simulator', botSimulatorRoutes);
 // Middleware de errores
 app.use(errorHandler);
 
+// Socket.IO events
+io.on('connection', (socket) => {
+  console.log(`🔌 Cliente conectado: ${socket.id}`);
+
+  socket.on('subscribe-whatsapp', (numeroId) => {
+    socket.join(`whatsapp-${numeroId}`);
+    console.log(`📱 Cliente suscrito a número ${numeroId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`🔌 Cliente desconectado: ${socket.id}`);
+  });
+});
+
+// Iniciar sesiones WhatsApp al arrancar
+(async () => {
+  try {
+    const { initializeAllSessions } = await import('./services/baileys.service.js');
+    await initializeAllSessions(io);
+  } catch (err) {
+    console.warn('⚠️  Error inicializando sesiones WhatsApp:', err.message);
+  }
+})();
+
 // Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en http://0.0.0.0:${PORT}`);
   console.log(`📍 Zona horaria: ${process.env.TZ || 'America/Mexico_City'}`);
   console.log(`🏢 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔌 Socket.IO activo`);
 });
 
 // Manejo de señales
 process.on('SIGTERM', async () => {
   console.log('SIGTERM recibido, cerrando servidor...');
+  io.close();
   await prisma.$disconnect();
   redis.disconnect();
   process.exit(0);
@@ -131,6 +171,7 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   console.log('SIGINT recibido, cerrando servidor...');
+  io.close();
   await prisma.$disconnect();
   redis.disconnect();
   process.exit(0);

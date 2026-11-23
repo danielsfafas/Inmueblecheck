@@ -4,11 +4,13 @@ import api from '../../services/api';
 import { Plus, Search, Filter } from 'lucide-react';
 import { formatRelativeTime, getCalificacionColor, getCalificacionLabel, getEtapaColor, getEtapaLabel } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import ProspectoNuevoModal from '../../components/ProspectoNuevoModal';
 
 export default function ProspectosPage() {
   const [searchParams] = useSearchParams();
   const [prospectos, setProspectos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalNuevoOpen, setModalNuevoOpen] = useState(false);
   const [filtros, setFiltros] = useState({
     etapa: searchParams.get('etapa') || '',
     calificacion: searchParams.get('calificacion') || '',
@@ -59,7 +61,23 @@ export default function ProspectosPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Prospectos</h1>
+        <button
+          onClick={() => setModalNuevoOpen(true)}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Nuevo Prospecto
+        </button>
       </div>
+
+      <ProspectoNuevoModal
+        isOpen={modalNuevoOpen}
+        onClose={() => setModalNuevoOpen(false)}
+        onSuccess={() => {
+          toast.success('Prospecto creado exitosamente');
+          cargarProspectos();
+        }}
+      />
 
       {/* Filtros */}
       <div className="p-4 mb-6 space-y-4 bg-white rounded-lg shadow">
