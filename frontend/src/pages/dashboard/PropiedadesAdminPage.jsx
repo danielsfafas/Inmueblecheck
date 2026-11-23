@@ -28,12 +28,24 @@ export default function PropiedadesAdminPage() {
     try {
       toast.loading('Generando video...', { id: 'video-gen' });
       
-      const response = await api.post(`/videos/propiedades/${propiedadId}/generar`, {}, {
+      // 1. POST para generar el video (retorna JSON)
+      const { data: result } = await api.post(`/videos/propiedades/${propiedadId}/generar`);
+
+      if (!result.success) {
+        toast.error(result.message || 'Error al generar video', { id: 'video-gen' });
+        return;
+      }
+
+      toast.loading('Descargando video...', { id: 'video-gen' });
+
+      // 2. GET al video.url con blob response
+      const videoUrl = result.video.url; // /api/videos/files/propiedad-<id>.mp4
+      const response = await api.get(videoUrl, {
         responseType: 'blob',
       });
 
-      // Crear URL del blob y descargarlo
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // 3. Crear URL del blob y descargarlo
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'video/mp4' }));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `propiedad-${propiedadId}.mp4`);
@@ -42,10 +54,10 @@ export default function PropiedadesAdminPage() {
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success('Video generado y descargado', { id: 'video-gen' });
+      toast.success('Video descargado exitosamente', { id: 'video-gen' });
     } catch (error) {
       console.error('Error al generar video:', error);
-      toast.error('Error al generar video', { id: 'video-gen' });
+      toast.error(error.response?.data?.message || 'Error al generar/descargar video', { id: 'video-gen' });
     }
   };
 
