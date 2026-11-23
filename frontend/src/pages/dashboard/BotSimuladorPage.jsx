@@ -31,87 +31,41 @@ export default function BotSimuladorPage() {
     };
 
     setMensajes((prev) => [...prev, mensajeUsuario]);
+    const mensajeEnviado = inputMensaje;
     setInputMensaje('');
     setCargando(true);
 
     try {
-      // Simular respuesta del bot
-      const respuestaBot = await simularRespuestaBot(inputMensaje);
+      // Llamar al endpoint real del backend
+      const { data } = await api.post('/bot-simulator/mensaje', {
+        mensaje: mensajeEnviado,
+      });
 
       setMensajes((prev) => [
         ...prev,
         {
           id: prev.length + 1,
           esBot: true,
-          contenido: respuestaBot.contenido,
+          contenido: data.respuesta,
           timestamp: new Date(),
-          pasadoAHumano: respuestaBot.pasadoAHumano,
+          pasadoAHumano: data.pasadoAHumano,
+          dadoDeBaja: data.dadoDeBaja,
         },
       ]);
 
-      if (respuestaBot.pasadoAHumano) {
-        toast.success('El prospecto ha sido pasado a un ejecutivo humano');
+      if (data.pasadoAHumano) {
+        toast.success('✅ Pase a ejecutivo registrado en el sistema');
+      }
+
+      if (data.dadoDeBaja) {
+        toast.info('ℹ️ Baja registrada en el sistema');
       }
     } catch (error) {
+      console.error('Error al procesar el mensaje:', error);
       toast.error('Error al procesar el mensaje');
     } finally {
       setCargando(false);
     }
-  };
-
-  const simularRespuestaBot = async (mensaje) => {
-    const mensajeLower = mensaje.toLowerCase();
-
-    // Comando BAJA
-    if (mensajeLower.includes('baja') || mensajeLower.includes('no contactar')) {
-      return {
-        contenido: 'Entendido. He registrado tu solicitud de baja de comunicaciones. No volverás a recibir mensajes de nuestra parte. ¡Que tengas un excelente día!',
-        pasadoAHumano: false,
-      };
-    }
-
-    // Comando AGENTE
-    if (
-      mensajeLower.includes('agente') ||
-      mensajeLower.includes('humano') ||
-      mensajeLower.includes('ejecutivo') ||
-      mensajeLower.includes('persona')
-    ) {
-      return {
-        contenido: 'Por supuesto, te voy a conectar con uno de nuestros ejecutivos. Un momento, por favor...\n\n✅ Has sido transferido a María López. En breve te contactará.',
-        pasadoAHumano: true,
-      };
-    }
-
-    // Consultas sobre propiedades
-    if (mensajeLower.includes('casa') || mensajeLower.includes('propiedad') || mensajeLower.includes('departamento')) {
-      return {
-        contenido: 'Tenemos varias opciones disponibles:\n\n🏠 Casas en venta desde $950,000\n🏢 Departamentos en renta desde $4,500/mes\n🏘️ Terrenos desde $950,000\n\n¿Te gustaría ver alguna en específico? También puedo conectarte con un ejecutivo para una asesoría personalizada.',
-        pasadoAHumano: false,
-      };
-    }
-
-    // Consultas sobre créditos
-    if (mensajeLower.includes('crédito') || mensajeLower.includes('infonavit') || mensajeLower.includes('bancario') || mensajeLower.includes('fovissste')) {
-      return {
-        contenido: 'Aceptamos diferentes formas de pago:\n\n✅ Contado\n✅ Crédito bancario\n✅ Infonavit\n✅ Fovissste\n\nLa mayoría de nuestras propiedades califican para créditos. ¿Te gustaría que un ejecutivo te explique las opciones específicas para tu situación?',
-        pasadoAHumano: false,
-      };
-    }
-
-    // Consultas sobre precios
-    if (mensajeLower.includes('precio') || mensajeLower.includes('costo') || mensajeLower.includes('cuanto')) {
-      return {
-        contenido: 'Nuestros precios varían según la propiedad:\n\n💰 Casas: desde $950,000 hasta $3,850,000\n💰 Departamentos en renta: desde $4,500/mes\n💰 Terrenos: desde $950,000\n\n¿Te interesa alguna en particular? Puedo darte más detalles.',
-        pasadoAHumano: false,
-      };
-    }
-
-    // Respuesta genérica
-    return {
-      contenido: 'Gracias por tu mensaje. Estoy aquí para ayudarte con:\n\n📋 Información sobre propiedades disponibles\n💳 Opciones de crédito y financiamiento\n📍 Ubicaciones y características\n👤 Conectarte con un ejecutivo\n\n¿En qué te gustaría que te ayude?',
-      pasadoAHumano: false,
-    };
   };
 
   const ejemplosComandos = [

@@ -22,6 +22,7 @@ import reporteRoutes from './routes/reporte.routes.js';
 import consentimientoRoutes from './routes/consentimiento.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import videoRoutes from './routes/video.routes.js';
+import botSimulatorRoutes from './routes/bot-simulator.routes.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -71,6 +72,7 @@ app.use('/api/recordatorios', recordatorioRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/consentimientos', consentimientoRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/bot-simulator', botSimulatorRoutes);
 
 // Middleware de errores
 app.use(errorHandler);
