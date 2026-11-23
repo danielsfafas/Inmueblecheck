@@ -28,7 +28,7 @@ export default function PropiedadesAdminPage() {
     try {
       toast.loading('Generando video...', { id: 'video-gen' });
       
-      const response = await api.get(`/videos/generar/${propiedadId}`, {
+      const response = await api.post(`/videos/propiedades/${propiedadId}/generar`, {}, {
         responseType: 'blob',
       });
 
