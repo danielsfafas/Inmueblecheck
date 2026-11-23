@@ -22,14 +22,22 @@ export async function procesarMensajeBot(telefono, mensaje) {
       return;
     }
 
-    // Buscar o crear conversación activa
+    // Buscar conversación activa (no pasada a humano, ni dado de baja)
     let conversacion = await prisma.conversacion.findFirst({
       where: {
         prospectoId: prospecto.id,
         pasadoAHumano: false,
       },
       orderBy: { createdAt: 'desc' },
+      include: {
+        mensajes: {
+          take: 1,
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
+
+    const esPrimeraInteraccion = !conversacion;
 
     if (!conversacion) {
       conversacion = await prisma.conversacion.create({
@@ -43,8 +51,12 @@ export async function procesarMensajeBot(telefono, mensaje) {
         },
       });
 
-      // Primer mensaje del bot
-      const mensajeBienvenida = generarMensajeBienvenida(prospecto.inmobiliaria);
+      // Primer mensaje del bot CON DIVULGACIÓN DE IA (requisito legal)
+      const mensajeBienvenida = `¡Hola! Soy el asistente virtual de ${prospecto.inmobiliaria.nombre}. 🤖\n\n` +
+        `Soy un sistema automatizado impulsado por inteligencia artificial. ` +
+        `Puedo ayudarte con información sobre propiedades, opciones de crédito y más.\n\n` +
+        `¿En qué puedo ayudarte hoy?\n\n` +
+        `💡 Escribe AGENTE para hablar con una persona o BAJA para no recibir más mensajes.`;
       
       await prisma.mensaje.create({
         data: {
@@ -178,18 +190,8 @@ export async function procesarMensajeBot(telefono, mensaje) {
   }
 }
 
-function generarMensajeBienvenida(inmobiliaria) {
-  return `¡Hola! 👋 Soy el asistente virtual de *${inmobiliaria.nombre}*.
-
-Estoy aquí para ayudarte a encontrar la propiedad ideal para ti. Puedo responder tus preguntas sobre nuestras propiedades disponibles, precios, ubicaciones y formas de pago.
-
-📋 Si en cualquier momento prefieres hablar con un asesor, escribe *AGENTE*.
-🛑 Para dejar de recibir mensajes, escribe *BAJA*.
-
-Consulta nuestro aviso de privacidad: ${inmobiliaria.urlAvisoPrivacidad || `https://ejemplo.com/privacidad`}
-
-¿En qué puedo ayudarte hoy?`;
-}
+// Función eliminada: La divulgación de IA ahora está inline en procesarMensajeBot
+// Ver línea ~46-50 donde se crea el mensaje de bienvenida con divulgación legal
 
 async function obtenerContextoConversacion(conversacionId, prospecto) {
   const mensajes = await prisma.mensaje.findMany({
