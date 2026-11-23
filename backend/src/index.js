@@ -23,6 +23,7 @@ import consentimientoRoutes from './routes/consentimiento.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import videoRoutes from './routes/video.routes.js';
 import botSimulatorRoutes from './routes/bot-simulator.routes.js';
+import propiedadVideosRoutes from './routes/propiedad-videos.routes.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -37,7 +38,14 @@ export const prisma = new PrismaClient();
 export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6391');
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "frame-src": ["'self'", "https://www.youtube-nocookie.com"],
+    },
+  },
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -59,6 +67,25 @@ app.use('/api/videos/files', express.static(videosPath, {
   },
 }));
 
+// Servir videos subidos por propiedades
+const uploadsVideosPath = path.join(__dirname, '..', 'uploads', 'videos');
+app.use('/uploads/videos', express.static(uploadsVideosPath, {
+  setHeaders: (res, filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.mp4') {
+      res.setHeader('Content-Type', 'video/mp4');
+    } else if (ext === '.webm') {
+      res.setHeader('Content-Type', 'video/webm');
+    } else if (ext === '.mov') {
+      res.setHeader('Content-Type', 'video/quicktime');
+    }
+  },
+}));
+
+// Servir fotos de seed
+const seedPhotosPath = path.join(__dirname, '..', 'uploads', 'seed');
+app.use('/uploads/seed', express.static(seedPhotosPath));
+
 // Rutas públicas (sin autenticación)
 app.use('/api/public', publicRoutes);
 
@@ -66,6 +93,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/inmobiliaria', inmobiliariaRoutes);
 app.use('/api/propiedades', propiedadRoutes);
+app.use('/api/propiedades', propiedadVideosRoutes); // Rutas de videos de propiedades
 app.use('/api/prospectos', prospectoRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/recordatorios', recordatorioRoutes);

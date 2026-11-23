@@ -129,6 +129,9 @@ router.get('/:slug/propiedades/:id', resolverInmobiliaria, async (req, res, next
             horario: true,
           },
         },
+        videos: {
+          orderBy: { orden: 'asc' },
+        },
       },
     });
 
