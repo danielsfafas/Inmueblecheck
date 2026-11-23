@@ -195,13 +195,11 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
         // Desconexión
         if (connection === 'close') {
-          const shouldReconnect = (lastDisconnect?.error instanceof Boom) &&
-            lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
+          const statusCode = lastDisconnect?.error instanceof Boom 
+            ? lastDisconnect.error.output?.statusCode 
+            : null;
 
-          console.log(`⚠️  Conexión cerrada para ${numeroWhatsappId}, reconectar:`, shouldReconnect);
-
-          activeSessions.delete(numeroWhatsappId);
-          qrCodes.delete(numeroWhatsappId);
+          console.log(`⚠️  Conexión cerrada para ${numeroWhatsappId}, statusCode:`, statusCode);
 
           // Verificar si el número aún existe antes de reconectar/actualizar
           const exists = await prisma.numeroWhatsapp.findUnique({
@@ -211,16 +209,62 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
           if (!exists) {
             console.log(`⚠️  Número ${numeroWhatsappId} fue eliminado, no reconectar`);
+            activeSessions.delete(numeroWhatsappId);
+            qrCodes.delete(numeroWhatsappId);
             return;
           }
 
-          if (shouldReconnect && exists.activo) {
-            // Reconexión automática después de 5 segundos
-            setTimeout(() => {
-              console.log(`🔄 Reconectando ${numeroWhatsappId}...`);
-              startBaileysSession(numeroWhatsappId, io);
-            }, 5000);
-          } else {
+          // Manejar casos específicos
+          if (statusCode === DisconnectReason.loggedOut) {
+            // Usuario cerró sesión desde WhatsApp: borrar sesión y marcar desconectado
+            console.log('🔴 Sesión cerrada (loggedOut), limpiar credenciales');
+            
+            activeSessions.delete(numeroWhatsappId);
+            qrCodes.delete(numeroWhatsappId);
+
+            try {
+              await prisma.numeroWhatsapp.updateMany({
+                where: { id: numeroWhatsappId },
+                data: { 
+                  estadoConexion: 'disconnected',
+                  sessionData: null,
+                },
+              });
+            } catch (err) {
+              console.warn(`No se pudo actualizar estado: ${err.message}`);
+            }
+
+            // Limpiar archivos de sesión
+            const sessionDir = getSessionDir(numeroWhatsappId);
+            try {
+              await fs.rm(sessionDir, { recursive: true, force: true });
+            } catch (err) {
+              console.warn('Error limpiando sesión:', err.message);
+            }
+
+            if (io) {
+              io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { numeroId: numeroWhatsappId });
+            }
+          } else if (statusCode === DisconnectReason.restartRequired) {
+            // Baileys requiere restart (código 515): recrear socket con mismas credenciales
+            console.log('🔄 Restart requerido (515), recreando socket con credenciales existentes...');
+            
+            activeSessions.delete(numeroWhatsappId);
+            qrCodes.delete(numeroWhatsappId);
+
+            if (exists.activo) {
+              setTimeout(() => {
+                console.log('🔄 Reconectando después de restartRequired...');
+                startBaileysSession(numeroWhatsappId, io);
+              }, 2000);
+            }
+          } else if (statusCode === DisconnectReason.connectionReplaced) {
+            // Otra sesión tomó el control
+            console.log('⚠️  Conexión reemplazada desde otro dispositivo');
+            
+            activeSessions.delete(numeroWhatsappId);
+            qrCodes.delete(numeroWhatsappId);
+
             try {
               await prisma.numeroWhatsapp.updateMany({
                 where: { id: numeroWhatsappId },
@@ -231,7 +275,38 @@ export async function startBaileysSession(numeroWhatsappId, io) {
             }
 
             if (io) {
-              io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { numeroId: numeroWhatsappId });
+              io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { 
+                numeroId: numeroWhatsappId,
+                reason: 'Conexión reemplazada desde otro dispositivo' 
+              });
+            }
+          } else {
+            // Otros errores: intentar reconectar si está activo
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && exists.activo;
+
+            console.log(`⚠️  Reconectar: ${shouldReconnect}`);
+
+            activeSessions.delete(numeroWhatsappId);
+            qrCodes.delete(numeroWhatsappId);
+
+            if (shouldReconnect) {
+              setTimeout(() => {
+                console.log('🔄 Reconectando después de error...');
+                startBaileysSession(numeroWhatsappId, io);
+              }, 5000);
+            } else {
+              try {
+                await prisma.numeroWhatsapp.updateMany({
+                  where: { id: numeroWhatsappId },
+                  data: { estadoConexion: 'disconnected' },
+                });
+              } catch (err) {
+                console.warn(`No se pudo actualizar estado: ${err.message}`);
+              }
+
+              if (io) {
+                io.to(`whatsapp-${numeroWhatsappId}`).emit('disconnected', { numeroId: numeroWhatsappId });
+              }
             }
           }
         }

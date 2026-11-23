@@ -37,7 +37,7 @@ export default function MiWhatsAppPage() {
     };
   }, []);
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (retryCount = 0) => {
     try {
       setLoading(true);
       const [numerosRes, listaNegraRes] = await Promise.all([
@@ -48,8 +48,16 @@ export default function MiWhatsAppPage() {
       setNumeros(numerosRes.data || []);
       setListaNegra(listaNegraRes.data || []);
     } catch (err) {
-      toast.error('Error al cargar datos');
-      console.error(err);
+      console.error('Error cargando datos:', err);
+      
+      // Reintentar una vez después de 2 segundos
+      if (retryCount === 0) {
+        console.log('Reintentando cargar datos...');
+        setTimeout(() => cargarDatos(1), 2000);
+      } else {
+        // Mostrar un único toast después del reintento
+        toast.error('Error al cargar datos. Intenta recargar la página.');
+      }
     } finally {
       setLoading(false);
     }
