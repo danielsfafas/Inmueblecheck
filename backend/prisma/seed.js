@@ -417,7 +417,134 @@ async function main() {
     });
   }
 
+  const prospectosCreados = [];
+  for (const prosp of prospectos) {
+    const p = await prisma.prospecto.create({
+      data: {
+        ...prosp,
+        inmobiliariaId: inmobiliaria.id,
+      },
+    });
+    prospectosCreados.push(p);
+  }
+
   console.log(`✅ ${prospectos.length} prospectos creados`);
+
+  // 4.1. Crear actividades de ejemplo para los prospectos
+  const actividades = [
+    {
+      prospectoId: prospectosCreados[0].id,
+      usuarioId: ejecutivo1.id,
+      tipo: 'MENSAJE',
+      titulo: 'Primer contacto por WhatsApp',
+      descripcion: 'Cliente interesado en casa de 2.5M en Tepeapulco Centro. Pregunta por opciones de crédito bancario.',
+    },
+    {
+      prospectoId: prospectosCreados[0].id,
+      usuarioId: ejecutivo1.id,
+      tipo: 'LLAMADA',
+      titulo: 'Llamada de seguimiento',
+      descripcion: 'Cliente confirmó visita para el sábado 10:00 AM. Tiene pre-aprobación del banco por $1.8M.',
+    },
+    {
+      prospectoId: prospectosCreados[0].id,
+      usuarioId: ejecutivo1.id,
+      tipo: 'VISITA',
+      titulo: 'Visita a propiedad',
+      descripcion: 'Visitó la casa en Tepeapulco Centro. Le gustó mucho, especialmente el jardín. Va a consultar con su esposa.',
+    },
+    {
+      prospectoId: prospectosCreados[1].id,
+      usuarioId: ejecutivo2.id,
+      tipo: 'MENSAJE',
+      titulo: 'Contacto inicial por Facebook',
+      descripcion: 'Pregunta por departamentos en renta cerca del centro.',
+    },
+    {
+      prospectoId: prospectosCreados[2].id,
+      usuarioId: ejecutivo1.id,
+      tipo: 'LLAMADA',
+      titulo: 'Cliente busca terreno',
+      descripcion: 'Interesado en terrenos para construcción. Presupuesto amplio de hasta $4M.',
+    },
+    {
+      prospectoId: prospectosCreados[2].id,
+      usuarioId: ejecutivo1.id,
+      tipo: 'NOTA',
+      titulo: 'Cliente VIP',
+      descripcion: 'Excelente prospecto. Tiene crédito pre-aprobado y liquidez inmediata. Priorizar.',
+    },
+    {
+      prospectoId: prospectosCreados[3].id,
+      usuarioId: ejecutivo2.id,
+      tipo: 'MENSAJE',
+      titulo: 'Consulta sobre casa en Sahagún',
+      descripcion: 'Pregunta si acepta Infonavit. Le confirmé que sí.',
+    },
+  ];
+
+  for (const act of actividades) {
+    await prisma.actividad.create({
+      data: {
+        ...act,
+        inmobiliariaId: inmobiliaria.id,
+      },
+    });
+  }
+
+  console.log(`✅ ${actividades.length} actividades creadas`);
+
+  // 4.2. Crear recordatorios de ejemplo
+  const ahora = new Date();
+  const manana = new Date(ahora);
+  manana.setDate(ahora.getDate() + 1);
+  manana.setHours(10, 0, 0, 0);
+
+  const pasadoManana = new Date(ahora);
+  pasadoManana.setDate(ahora.getDate() + 2);
+  pasadoManana.setHours(15, 30, 0, 0);
+
+  const ayer = new Date(ahora);
+  ayer.setDate(ahora.getDate() - 1);
+  ayer.setHours(14, 0, 0, 0);
+
+  const recordatorios = [
+    {
+      prospectoId: prospectosCreados[0].id,
+      usuarioId: ejecutivo1.id,
+      titulo: 'Seguimiento post-visita',
+      descripcion: 'Llamar para saber decisión después de consultar con esposa',
+      fechaRecordatorio: manana,
+      completado: false,
+    },
+    {
+      prospectoId: prospectosCreados[2].id,
+      usuarioId: ejecutivo1.id,
+      titulo: 'Enviar opciones de terrenos',
+      descripcion: 'Preparar catálogo de terrenos disponibles y enviar por WhatsApp',
+      fechaRecordatorio: pasadoManana,
+      completado: false,
+    },
+    {
+      prospectoId: prospectosCreados[3].id,
+      usuarioId: ejecutivo2.id,
+      titulo: 'Agendar visita',
+      descripcion: 'Llamar para agendar visita a casa en Sahagún',
+      fechaRecordatorio: ayer,
+      completado: false,
+    },
+  ];
+
+  for (const rec of recordatorios) {
+    await prisma.recordatorio.create({
+      data: {
+        ...rec,
+        inmobiliariaId: inmobiliaria.id,
+      },
+    });
+  }
+
+  console.log(`✅ ${recordatorios.length} recordatorios creados (1 vencido, 2 pendientes)`);
 
   // 5. Crear algunos consentimientos de ejemplo
   await prisma.consentimiento.create({
@@ -454,12 +581,15 @@ async function main() {
   console.log('\n📋 Resumen:');
   console.log(`   - 1 Inmobiliaria: ${inmobiliaria.nombre}`);
   console.log(`   - 3 Usuarios (1 Admin, 2 Ejecutivos)`);
-  console.log(`   - ${propiedades.length} Propiedades`);
+  console.log(`   - ${propiedades.length} Propiedades (6 disponibles, 1 apartada, 1 vendida)`);
   console.log(`   - ${prospectos.length} Prospectos`);
+  console.log(`   - ${actividades.length} Actividades (mensajes, llamadas, visitas, notas)`);
+  console.log(`   - ${recordatorios.length} Recordatorios (1 vencido, 2 pendientes)`);
   console.log('\n🔑 Credenciales de acceso:');
   console.log('   Admin: admin@casashidalgo.com.mx / Demo2024!');
   console.log('   Ejecutivo 1: maria.lopez@casashidalgo.com.mx / Demo2024!');
   console.log('   Ejecutivo 2: carlos.garcia@casashidalgo.com.mx / Demo2024!');
+  console.log('\n📌 Nota: El dashboard mostrará 1 recordatorio vencido para pruebas.');
 }
 
 main()

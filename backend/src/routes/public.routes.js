@@ -19,9 +19,13 @@ router.get('/propiedades', async (req, res, next) => {
     } = req.query;
 
     const where = {
-      inmobiliariaId,
       estadoPropiedad: 'DISPONIBLE',
     };
+
+    // Si se especifica inmobiliariaId, filtrar por ella
+    if (inmobiliariaId) {
+      where.inmobiliariaId = inmobiliariaId;
+    }
 
     if (tipo) {
       where.tipo = tipo;
