@@ -58,18 +58,22 @@ export function enmascarCredenciales(numeroWhatsapp) {
 
 /**
  * Verificar si un número remitente está en la lista negra del dueño del número receptor
+ * Compara contra número normalizado E.164 Y contra LID (si aplica)
+ * @param {string} numeroRemitente - Puede ser E.164 (+525512345678) o LID completo (219502943989980@lid)
  */
 export async function estaEnListaNegra(prisma, usuarioId, numeroRemitente) {
   const numeroNormalizado = normalizarNumeroE164(numeroRemitente);
   
-  if (!numeroNormalizado) {
-    return false;
-  }
-
+  // Buscar por número normalizado O por el remitente original (LID)
   const entrada = await prisma.listaNegra.findFirst({
     where: {
       usuarioId,
-      numeroRemitente: numeroNormalizado,
+      OR: [
+        // Comparar contra número E.164
+        ...(numeroNormalizado ? [{ numeroRemitente: numeroNormalizado }] : []),
+        // Comparar contra LID completo o número sin normalizar
+        { numeroRemitente: numeroRemitente },
+      ],
     },
   });
 

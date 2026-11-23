@@ -123,6 +123,7 @@ export async function startBaileysSession(numeroWhatsappId, io) {
       version,
       logger,
       printQRInTerminal: false,
+      browser: ['InmuebleCheck', 'Chrome', '1.0.0'], // Aparece como "InmuebleCheck" en dispositivos vinculados
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, logger),
@@ -376,22 +377,41 @@ export async function startBaileysSession(numeroWhatsappId, io) {
 
           // 4. Resolver número real desde LID o formato clásico
           let telefono = null;
+          let pushName = msg.pushName || null; // Nombre visible del usuario (para prospecto)
           
           // WhatsApp ahora usa LID (@lid) en vez de @s.whatsapp.net
-          // Intentar obtener número real desde campos de Baileys:
           if (remoteJid.includes('@lid')) {
-            // Baileys 7.x: msg.key.participant contiene el PN (phone number) real
-            // O usar pushName/verifiedBizName/remoteJidAlt según disponibilidad
-            telefono = msg.key.participant?.replace('@s.whatsapp.net', '') ||
-                      msg.verifiedBizName ||
-                      msg.pushName;
+            // Baileys 7.x expone campos alt para resolución LID:
+            // - msg.key.participantAlt: PN del remitente en grupos
+            // - msg.key.remoteJidAlt: PN del chat 1-a-1
+            // - sock.signalRepository.lidMapping.getPNForLID(): mapeo persistente
             
-            // Si no se puede resolver, guardar el LID completo para tracking
-            if (!telefono || !telefono.match(/^\d+$/)) {
-              telefono = remoteJid; // Guardar LID completo como fallback
-              console.log(`⚠️  No se pudo resolver LID a número E.164, usando LID: ${remoteJid}`);
+            const pnFromAlt = msg.key.remoteJidAlt || msg.key.participantAlt;
+            
+            if (pnFromAlt && pnFromAlt.includes('@s.whatsapp.net')) {
+              // Resuelto desde campos alt
+              telefono = pnFromAlt.replace('@s.whatsapp.net', '');
+              console.log(`✅ LID resuelto (alt): ${remoteJid} → +${telefono}`);
             } else {
-              console.log(`✅ LID resuelto: ${remoteJid} → +${telefono}`);
+              // Intentar desde mapeo persistente de Baileys
+              try {
+                const session = activeSessions.get(numeroWhatsappId);
+                if (session?.sock?.signalRepository?.lidMapping) {
+                  const pnResolved = await session.sock.signalRepository.lidMapping.getPNForLID(remoteJid);
+                  if (pnResolved) {
+                    telefono = pnResolved.replace('@s.whatsapp.net', '');
+                    console.log(`✅ LID resuelto (mapping): ${remoteJid} → +${telefono}`);
+                  }
+                }
+              } catch (err) {
+                console.warn(`Error resolviendo LID desde mapping: ${err.message}`);
+              }
+            }
+            
+            // Fallback: guardar el LID completo para tracking
+            if (!telefono) {
+              telefono = remoteJid; // Guardar LID como fallback
+              console.log(`⚠️  No se pudo resolver LID a PN, usando LID: ${remoteJid}`);
             }
           } else {
             // Formato clásico @s.whatsapp.net
@@ -407,8 +427,8 @@ export async function startBaileysSession(numeroWhatsappId, io) {
           }
 
           // 6. Procesar con el bot
-          // Pasar: telefono (E.164 o LID), texto, remoteJid original (para responder), numeroWhatsappId
-          await procesarMensajeBot(telefono, text, null, numeroWhatsappId, remoteJid);
+          // Pasar: telefono (E.164 o LID), texto, phoneNumberId (null), numeroWhatsappId, remoteJid, pushName
+          await procesarMensajeBot(telefono, text, null, numeroWhatsappId, remoteJid, pushName);
 
         } catch (err) {
           console.error('Error procesando mensaje:', err);

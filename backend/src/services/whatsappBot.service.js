@@ -7,9 +7,9 @@ import {
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 
-export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null, remoteJid = null) {
+export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null, remoteJid = null, pushName = null) {
   try {
-    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}${remoteJid ? ` (remoteJid: ${remoteJid})` : ''}`);
+    console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}${remoteJid ? ` (remoteJid: ${remoteJid})` : ''}${pushName ? ` (pushName: ${pushName})` : ''}`);
 
     // 1. Encontrar número WhatsApp receptor (routing multi-usuario)
     let numeroReceptor = null;
@@ -110,22 +110,42 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
     if (!prospecto) {
       console.log(`📝 Prospecto nuevo desde WhatsApp, creando automáticamente...`);
       
-      // Crear prospecto automáticamente (origen WhatsApp, asignado al dueño del número)
+      // Determinar nombre y teléfono según si se pudo resolver el LID
+      let nombreProspecto;
+      let telefonoProspecto;
+      let origenProspecto;
+      
+      if (telefonoNormalizado && !remoteJid?.includes('@lid')) {
+        // Número E.164 resuelto correctamente
+        nombreProspecto = pushName || telefonoNormalizado;
+        telefonoProspecto = telefonoNormalizado;
+        origenProspecto = 'WhatsApp';
+      } else if (remoteJid?.includes('@lid')) {
+        // LID no resuelto: usar pushName como nombre, LID completo en origen
+        nombreProspecto = pushName || 'Usuario WhatsApp';
+        telefonoProspecto = telefonoNormalizado || `LID-${Date.now()}`; // Fallback único si no hay PN
+        origenProspecto = `WhatsApp LID: ${remoteJid}`;
+      } else {
+        // Fallback general
+        nombreProspecto = pushName || telefono;
+        telefonoProspecto = telefonoNormalizado || telefono;
+        origenProspecto = 'WhatsApp';
+      }
+      
       prospecto = await prisma.prospecto.create({
         data: {
           inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
-          nombre: telefono, // Usamos el teléfono como nombre temporal
-          telefono: telefonoNormalizado || telefono,
-          origen: 'WhatsApp',
-          ejecutivoId: numeroReceptor.usuarioId, // Asignar al dueño del número
-          calificacion: 'SIN_CALIFICAR',
-          etapa: 'NUEVO',
-          noContactar: false,
+          nombre: nombreProspecto,
+          telefono: telefonoProspecto,
+          origen: origenProspecto,
+          ejecutivoId: numeroReceptor.usuarioId,
+          // calificacion omitido → usa @default(FRIO) del schema
+          // etapa omitido → usa @default(NUEVO) del schema
         },
         include: { inmobiliaria: true },
       });
 
-      console.log(`✅ Prospecto creado automáticamente: ${prospecto.id} - ${telefono}`);
+      console.log(`✅ Prospecto creado: ${prospecto.id} - ${nombreProspecto} (tel: ${telefonoProspecto}, origen: ${origenProspecto})`);
     }
 
     // Verificar si está en lista de no contactar

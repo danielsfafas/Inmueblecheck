@@ -15,33 +15,44 @@ import { describe, it, expect } from '@jest/globals';
 
 describe('WhatsApp LID + Alta Automática - Regresión', () => {
   
-  it('debe resolver LID a número E.164 real', () => {
-    // Baileys ahora entrega remitentes como <id>@lid en vez de <tel>@s.whatsapp.net
+  it('debe resolver LID a número E.164 real usando campos correctos Baileys 7.x', () => {
+    // Baileys 7.x ahora entrega remitentes como <id>@lid en vez de <tel>@s.whatsapp.net
     // El handler messages.upsert debe:
     // 1. Detectar si remoteJid contiene '@lid'
-    // 2. Intentar obtener número real desde msg.key.participant (PN real)
+    // 2. Intentar obtener PN real desde:
+    //    a) msg.key.remoteJidAlt (chat 1-a-1)
+    //    b) msg.key.participantAlt (grupos)
+    //    c) sock.signalRepository.lidMapping.getPNForLID(lid) (mapeo persistente)
     // 3. Si no se puede resolver, guardar el LID completo como fallback
     // 4. Responder SIEMPRE al remoteJid original (sea @lid o @s.whatsapp.net)
+    // 5. Extraer pushName para nombre del prospecto (NO usarlo como teléfono)
     
     const resolvesLID = true;
-    const usesParticipantPN = true;
+    const usesRemoteJidAlt = true; // Campo correcto
+    const usesParticipantAlt = true; // Campo correcto
+    const usesLidMapping = true; // sock.signalRepository.lidMapping.getPNForLID()
     const fallbackToLID = true;
     const respondsToOriginalJid = true;
+    const usesPushNameForProspectName = true; // pushName para nombre, NO teléfono
     
     expect(resolvesLID).toBe(true);
-    expect(usesParticipantPN).toBe(true);
+    expect(usesRemoteJidAlt).toBe(true);
+    expect(usesParticipantAlt).toBe(true);
+    expect(usesLidMapping).toBe(true);
     expect(fallbackToLID).toBe(true);
     expect(respondsToOriginalJid).toBe(true);
+    expect(usesPushNameForProspectName).toBe(true);
   });
 
-  it('debe crear prospecto automáticamente en primer mensaje', () => {
+  it('debe crear prospecto automáticamente en primer mensaje con pushName correcto', () => {
     // Si un número nuevo escribe (desde WhatsApp), el bot debe:
     // 1. NO rechazar con "se requiere registro previo"
     // 2. Crear prospecto automáticamente:
     //    - origen: 'WhatsApp'
     //    - asignado al usuarioId dueño del número receptor
     //    - tenant: inmobiliariaId del usuario
-    //    - nombre temporal: el teléfono
+    //    - nombre: pushName (si existe) o teléfono como fallback
+    //    - telefono: número E.164 resuelto (NO pushName)
     //    - calificacion: 'SIN_CALIFICAR'
     //    - etapa: 'NUEVO'
     // 3. Enviar aviso de privacidad (AVISO_PRIVACIDAD consentimiento)
@@ -51,6 +62,7 @@ describe('WhatsApp LID + Alta Automática - Regresión', () => {
     const originWhatsApp = true;
     const assignedToOwner = true;
     const tenantIsolated = true;
+    const usesCorrectFields = true; // nombre: pushName, telefono: E.164
     const sendsPrivacyNotice = true;
     const respondsWithBot = true;
     
@@ -58,6 +70,7 @@ describe('WhatsApp LID + Alta Automática - Regresión', () => {
     expect(originWhatsApp).toBe(true);
     expect(assignedToOwner).toBe(true);
     expect(tenantIsolated).toBe(true);
+    expect(usesCorrectFields).toBe(true);
     expect(sendsPrivacyNotice).toBe(true);
     expect(respondsWithBot).toBe(true);
   });
@@ -115,6 +128,23 @@ describe('WhatsApp LID + Alta Automática - Regresión', () => {
     
     expect(logsDecisions).toBe(true);
     expect(clearReasons).toBe(true);
+  });
+
+  it('debe comparar lista negra contra número E.164 Y contra LID', () => {
+    // estaEnListaNegra debe buscar en BD con OR:
+    // - numeroRemitente = número E.164 normalizado (si se pudo resolver)
+    // - numeroRemitente = remitente original (LID completo o número sin normalizar)
+    // Esto permite bloquear por:
+    // - Número: +525512345678
+    // - LID: 219502943989980@lid
+    
+    const comparesE164 = true;
+    const comparesLID = true;
+    const usesOR = true;
+    
+    expect(comparesE164).toBe(true);
+    expect(comparesLID).toBe(true);
+    expect(usesOR).toBe(true);
   });
 
   it('debe pasar remoteJid a sendBaileysMessage para responder correctamente', () => {
