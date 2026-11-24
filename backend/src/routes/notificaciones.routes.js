@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../index.js';
-import { verificarToken } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { marcarNotificacionesLeidas } from '../services/notificaciones.service.js';
 
 const router = express.Router();
@@ -9,9 +9,9 @@ const router = express.Router();
  * GET /api/notificaciones
  * Obtener notificaciones del usuario actual
  */
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { id: usuarioId, inmobiliariaId } = req.usuario;
+    const { id: usuarioId, inmobiliariaId } = req.user;
     const { leida, limit = 50 } = req.query;
 
     const where = {
@@ -51,9 +51,9 @@ router.get('/', verificarToken, async (req, res) => {
  * PATCH /api/notificaciones/marcar-leidas
  * Marcar notificaciones como leídas
  */
-router.patch('/marcar-leidas', verificarToken, async (req, res) => {
+router.patch('/marcar-leidas', authenticateToken, async (req, res) => {
   try {
-    const { id: usuarioId } = req.usuario;
+    const { id: usuarioId } = req.user;
     const { notificacionIds } = req.body;
 
     if (!notificacionIds || !Array.isArray(notificacionIds)) {
@@ -73,9 +73,9 @@ router.patch('/marcar-leidas', verificarToken, async (req, res) => {
  * PATCH /api/notificaciones/marcar-todas-leidas
  * Marcar todas las notificaciones como leídas
  */
-router.patch('/marcar-todas-leidas', verificarToken, async (req, res) => {
+router.patch('/marcar-todas-leidas', authenticateToken, async (req, res) => {
   try {
-    const { id: usuarioId, inmobiliariaId } = req.usuario;
+    const { id: usuarioId, inmobiliariaId } = req.user;
 
     await prisma.notificacion.updateMany({
       where: {

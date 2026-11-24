@@ -7,7 +7,7 @@
  * - Búsqueda sin filtro pasadoAHumano
  */
 
-import { describe, test, expect } from 'vitest';
+// Jest (no imports needed)
 
 describe('Conversaciones - Uniqueness Logic', () => {
   test('buscar conversación más reciente por prospecto+numeroWhatsapp', () => {

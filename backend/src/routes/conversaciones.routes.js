@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma, io } from '../index.js';
-import { verificarToken } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { sendBaileysMessage } from '../services/baileys.service.js';
 
 const router = express.Router();
@@ -9,10 +9,10 @@ const router = express.Router();
  * GET /api/conversaciones
  * Listar conversaciones con filtros
  */
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { search, status } = req.query;
-    const { inmobiliariaId, rol } = req.usuario;
+    const { inmobiliariaId, rol } = req.user;
 
     const where = {
       inmobiliariaId,
@@ -104,10 +104,10 @@ router.get('/', verificarToken, async (req, res) => {
  * GET /api/conversaciones/:id
  * Detalle de conversación con mensajes
  */
-router.get('/:id', verificarToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const conversacion = await prisma.conversacion.findFirst({
       where: {
@@ -166,10 +166,10 @@ router.get('/:id', verificarToken, async (req, res) => {
  * POST /api/conversaciones/:id/reactivar-bot
  * Reactivar bot (quitar pausa)
  */
-router.post('/:id/reactivar-bot', verificarToken, async (req, res) => {
+router.post('/:id/reactivar-bot', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const conversacion = await prisma.conversacion.findFirst({
       where: { id, inmobiliariaId },
@@ -202,8 +202,8 @@ router.post('/:id/reactivar-bot', verificarToken, async (req, res) => {
         prospectoId: conversacion.prospectoId,
         tipo: 'NOTA',
         titulo: 'Bot reactivado',
-        descripcion: `Bot reactivado por ${req.usuario.nombre}`,
-        usuarioId: req.usuario.id,
+        descripcion: `Bot reactivado por ${req.user.nombre}`,
+        usuarioId: req.user.id,
       },
     });
 
@@ -229,11 +229,11 @@ router.post('/:id/reactivar-bot', verificarToken, async (req, res) => {
  * POST /api/conversaciones/:id/pausar-bot
  * Pausar bot (manual)
  */
-router.post('/:id/pausar-bot', verificarToken, async (req, res) => {
+router.post('/:id/pausar-bot', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { horas = 24 } = req.body;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const conversacion = await prisma.conversacion.findFirst({
       where: { id, inmobiliariaId },
@@ -269,8 +269,8 @@ router.post('/:id/pausar-bot', verificarToken, async (req, res) => {
         prospectoId: conversacion.prospectoId,
         tipo: 'NOTA',
         titulo: 'Bot pausado',
-        descripcion: `Bot pausado por ${req.usuario.nombre} hasta ${botPausadoHasta.toISOString()}`,
-        usuarioId: req.usuario.id,
+        descripcion: `Bot pausado por ${req.user.nombre} hasta ${botPausadoHasta.toISOString()}`,
+        usuarioId: req.user.id,
       },
     });
 
@@ -297,11 +297,11 @@ router.post('/:id/pausar-bot', verificarToken, async (req, res) => {
  * POST /api/conversaciones/:id/enviar-mensaje
  * Enviar mensaje manual del asesor por WhatsApp
  */
-router.post('/:id/enviar-mensaje', verificarToken, async (req, res) => {
+router.post('/:id/enviar-mensaje', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { contenido } = req.body;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     if (!contenido || contenido.trim().length === 0) {
       return res.status(400).json({ error: 'Contenido del mensaje requerido' });
@@ -352,8 +352,8 @@ router.post('/:id/enviar-mensaje', verificarToken, async (req, res) => {
         prospectoId: conversacion.prospectoId,
         tipo: 'MENSAJE',
         titulo: 'Mensaje manual enviado',
-        descripcion: `${req.usuario.nombre} envió: ${contenido.substring(0, 100)}`,
-        usuarioId: req.usuario.id,
+        descripcion: `${req.user.nombre} envió: ${contenido.substring(0, 100)}`,
+        usuarioId: req.user.id,
       },
     });
 

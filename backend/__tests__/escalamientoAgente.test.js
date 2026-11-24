@@ -7,7 +7,7 @@
  * - Una conversación activa por numeroWhatsapp (no crear duplicada)
  */
 
-import { describe, test, expect } from 'vitest';
+// Jest (no imports needed)
 
 describe('Escalamiento AGENTE - Lógica pura', () => {
   test('calcular botPausadoHasta con horasAutoresume', () => {
@@ -56,7 +56,7 @@ describe('Escalamiento AGENTE - Lógica pura', () => {
     
     const estaPausado = conversacion.botPausadoHasta && conversacion.botPausadoHasta > ahora;
     
-    expect(estaPausado).toBe(false);
+    expect(estaPausado).toBeFalsy();
   });
 
   test('buscar conversación sin filtro pasadoAHumano (fix bug)', () => {
@@ -125,8 +125,8 @@ describe('Escalamiento AGENTE - Lógica pura', () => {
     conversacion.flujoBot = null;
     conversacion.flujoEstado = null;
 
-    expect(conversacion.flujoBot).toBe(null);
-    expect(conversacion.flujoEstado).toBe(null);
+    expect(conversacion.flujoBot).toBeNull();
+    expect(conversacion.flujoEstado).toBeNull();
   });
 });
 

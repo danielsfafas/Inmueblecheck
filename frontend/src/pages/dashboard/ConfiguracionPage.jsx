@@ -5,8 +5,10 @@ import toast from 'react-hot-toast';
 
 export default function ConfiguracionPage() {
   const [config, setConfig] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [editandoUsuario, setEditandoUsuario] = useState(null);
 
   useEffect(() => {
     cargarConfiguracion();
@@ -15,8 +17,12 @@ export default function ConfiguracionPage() {
   const cargarConfiguracion = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/inmobiliaria');
-      setConfig(data);
+      const [configRes, usuariosRes] = await Promise.all([
+        api.get('/inmobiliaria'),
+        api.get('/auth/usuarios'),
+      ]);
+      setConfig(configRes.data);
+      setUsuarios(usuariosRes.data);
     } catch (error) {
       toast.error('Error al cargar configuración');
     } finally {
@@ -34,6 +40,17 @@ export default function ConfiguracionPage() {
       toast.error('Error al guardar configuración');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const actualizarTelefonoUsuario = async (usuarioId, telefono) => {
+    try {
+      await api.patch(`/auth/usuarios/${usuarioId}`, { telefonoWhatsapp: telefono });
+      toast.success('Teléfono actualizado');
+      await cargarConfiguracion();
+      setEditandoUsuario(null);
+    } catch (error) {
+      toast.error('Error al actualizar teléfono');
     }
   };
 
@@ -213,6 +230,81 @@ export default function ConfiguracionPage() {
           </button>
         </div>
       </form>
+
+      <div className="max-w-4xl mt-8">
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">Usuarios</h2>
+          <p className="mb-4 text-sm text-gray-600">
+            Configura el teléfono WhatsApp para recibir notificaciones de escalamiento
+          </p>
+
+          <div className="overflow-hidden border border-gray-200 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">WhatsApp</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {usuarios.map((usuario) => (
+                  <tr key={usuario.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {usuario.nombre}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {usuario.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {usuario.rol}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {editandoUsuario === usuario.id ? (
+                        <input
+                          type="tel"
+                          defaultValue={usuario.telefonoWhatsapp || ''}
+                          placeholder="+5215512345678"
+                          className="px-2 py-1 border border-gray-300 rounded"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              actualizarTelefonoUsuario(usuario.id, e.target.value);
+                            } else if (e.key === 'Escape') {
+                              setEditandoUsuario(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span>{usuario.telefonoWhatsapp || '-'}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {editandoUsuario === usuario.id ? (
+                        <button
+                          onClick={() => setEditandoUsuario(null)}
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          Cancelar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setEditandoUsuario(usuario.id)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

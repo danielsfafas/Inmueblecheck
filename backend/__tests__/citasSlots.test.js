@@ -10,7 +10,7 @@
  * - Capacidad: 1 asesor + 1 propiedad por slot
  */
 
-import { describe, test, expect } from 'vitest';
+// Jest (no imports needed)
 import { parse, addMinutes, format, isAfter, isBefore } from 'date-fns';
 
 describe('Slots Generation - Lógica Pura', () => {

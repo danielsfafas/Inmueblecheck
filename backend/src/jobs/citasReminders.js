@@ -1,7 +1,7 @@
 import { prisma } from '../index.js';
 import { sendBaileysMessage } from '../services/baileys.service.js';
 import { addMinutes, format, isAfter, isBefore } from 'date-fns';
-import { es } from 'date-fns/locale';
+import es from 'date-fns/locale/es/index.js';
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 
 const TIMEZONE = 'America/Mexico_City';
@@ -44,11 +44,6 @@ async function procesarRecordatorios() {
       propiedad: true,
       asesor: true,
       inmobiliaria: true,
-      numeroWhatsapp: {
-        include: {
-          usuario: true,
-        },
-      },
     },
   });
 

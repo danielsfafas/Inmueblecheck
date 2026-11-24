@@ -2,7 +2,7 @@ import { prisma } from '../index.js';
 import { obtenerDiasConDisponibilidad, obtenerSlotsDisponibles, validarSlotDisponible, asignarAsesorLibre } from './citas.service.js';
 import { crearNotificacion, notificarAsesorPorWhatsApp } from './notificaciones.service.js';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import es from 'date-fns/locale/es/index.js';
 import { parseISO } from 'date-fns';
 
 /**
@@ -406,7 +406,7 @@ async function crearCita(conversacion, contexto, estado) {
       const mensajeAsesor = `📅 *Nueva Cita Agendada*\n\n` +
         `*Prospecto:* ${prospecto.nombre} (${prospecto.telefono})\n` +
         `*Fecha:* ${fechaStr} ${hora}\n` +
-        ${cita.propiedad ? `*Propiedad:* ${cita.propiedad.titulo}\n` : ''} +
+        `${cita.propiedad ? `*Propiedad:* ${cita.propiedad.titulo}\n` : ''}` +
         `\n🔗 Ver en panel: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/citas`;
 
       // WhatsApp si tiene teléfono

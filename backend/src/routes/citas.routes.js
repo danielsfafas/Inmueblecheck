@@ -1,11 +1,11 @@
 import express from 'express';
 import { prisma, io } from '../index.js';
-import { verificarToken } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { validarSlotDisponible, asignarAsesorLibre } from '../services/citas.service.js';
 import { crearNotificacion } from '../services/notificaciones.service.js';
 import { sendBaileysMessage } from '../services/baileys.service.js';
 import { startOfDay, addDays, format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import es from 'date-fns/locale/es/index.js';
 
 const router = express.Router();
 
@@ -13,9 +13,9 @@ const router = express.Router();
  * GET /api/citas
  * Listar citas con filtros
  */
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { estado, asesorId, propiedadId, fechaInicio, fechaFin } = req.query;
 
     const where = { inmobiliariaId };
@@ -80,10 +80,10 @@ router.get('/', verificarToken, async (req, res) => {
  * GET /api/citas/:id
  * Detalle de cita
  */
-router.get('/:id', verificarToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const cita = await prisma.cita.findFirst({
       where: { id, inmobiliariaId },
@@ -109,9 +109,9 @@ router.get('/:id', verificarToken, async (req, res) => {
  * POST /api/citas
  * Crear cita manual (admin)
  */
-router.post('/', verificarToken, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId, id: usuarioId } = req.usuario;
+    const { inmobiliariaId, id: usuarioId } = req.user;
     const { prospectoId, propiedadId, asesorId, fecha, hora, notas } = req.body;
 
     if (!prospectoId || !fecha || !hora) {
@@ -196,7 +196,7 @@ router.post('/', verificarToken, async (req, res) => {
       const mensaje = `📅 *Cita Asignada*\n\n` +
         `*Prospecto:* ${cita.prospecto.nombre} (${cita.prospecto.telefono})\n` +
         `*Fecha:* ${fechaStr} ${hora}\n` +
-        ${cita.propiedad ? `*Propiedad:* ${cita.propiedad.titulo}\n` : ''};
+        `${cita.propiedad ? `*Propiedad:* ${cita.propiedad.titulo}\n` : ''}`;
 
       // TODO: Enviar WA (necesita numeroWhatsappId)
     }
@@ -224,10 +224,10 @@ router.post('/', verificarToken, async (req, res) => {
  * PATCH /api/citas/:id
  * Actualizar cita
  */
-router.patch('/:id', verificarToken, async (req, res) => {
+router.patch('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { inmobiliariaId, id: usuarioId } = req.usuario;
+    const { inmobiliariaId, id: usuarioId } = req.user;
     const { estado, notas, motivoCancelacion } = req.body;
 
     const cita = await prisma.cita.findFirst({
@@ -279,12 +279,12 @@ router.patch('/:id', verificarToken, async (req, res) => {
         const fechaStr = format(cita.fecha, "EEEE d 'de' MMMM 'a las'", { locale: es });
         mensajeCliente = `✅ *Tu cita ha sido confirmada*\n\n` +
           `📅 ${fechaStr} ${cita.hora}\n` +
-          ${cita.propiedad ? `🏠 ${cita.propiedad.titulo}\n` : ''} +
-          ${cita.asesor ? `👤 Asesor: ${cita.asesor.nombre}\n` : ''} +
+          `${cita.propiedad ? `🏠 ${cita.propiedad.titulo}\n` : ''}` +
+          `${cita.asesor ? `👤 Asesor: ${cita.asesor.nombre}\n` : ''}` +
           `\n¡Te esperamos!`;
       } else if (estado === 'CANCELADA') {
         mensajeCliente = `❌ *Tu cita ha sido cancelada*\n\n` +
-          ${motivoCancelacion ? `Motivo: ${motivoCancelacion}\n\n` : ''} +
+          `${motivoCancelacion ? `Motivo: ${motivoCancelacion}\n\n` : ''}` +
           `Para reagendar, escribe *AGENDAR*`;
       }
 

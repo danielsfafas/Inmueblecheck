@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../index.js';
-import { verificarToken } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { obtenerSlotsDisponibles } from '../services/citas.service.js';
 import { parseISO, startOfDay, addDays } from 'date-fns';
 
@@ -10,9 +10,9 @@ const router = express.Router();
  * GET /api/horarios
  * Obtener horarios de la semana
  */
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const horarios = await prisma.horarioCitas.findMany({
       where: { inmobiliariaId },
@@ -44,10 +44,10 @@ router.get('/', verificarToken, async (req, res) => {
  * PUT /api/horarios/:diaSemana
  * Actualizar horario de un día
  */
-router.put('/:diaSemana', verificarToken, async (req, res) => {
+router.put('/:diaSemana', authenticateToken, async (req, res) => {
   try {
     const { diaSemana } = req.params;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { activo, horaInicio, horaFin, pausaInicio, pausaFin } = req.body;
 
     const dia = parseInt(diaSemana);
@@ -91,9 +91,9 @@ router.put('/:diaSemana', verificarToken, async (req, res) => {
  * GET /api/horarios/cierres
  * Listar cierres de calendario
  */
-router.get('/cierres/list', verificarToken, async (req, res) => {
+router.get('/cierres/list', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { fechaInicio, fechaFin } = req.query;
 
     const where = { inmobiliariaId };
@@ -124,9 +124,9 @@ router.get('/cierres/list', verificarToken, async (req, res) => {
  * POST /api/horarios/cierres
  * Crear cierre de calendario
  */
-router.post('/cierres', verificarToken, async (req, res) => {
+router.post('/cierres', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { fecha, diaCompleto, horaInicio, horaFin, motivo } = req.body;
 
     if (!fecha || !motivo) {
@@ -155,10 +155,10 @@ router.post('/cierres', verificarToken, async (req, res) => {
  * DELETE /api/horarios/cierres/:id
  * Eliminar cierre
  */
-router.delete('/cierres/:id', verificarToken, async (req, res) => {
+router.delete('/cierres/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     await prisma.cierreCalendario.deleteMany({
       where: { id, inmobiliariaId },
@@ -175,9 +175,9 @@ router.delete('/cierres/:id', verificarToken, async (req, res) => {
  * GET /api/horarios/slots
  * Obtener slots disponibles para una fecha
  */
-router.get('/slots', verificarToken, async (req, res) => {
+router.get('/slots', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { fecha, propiedadId } = req.query;
 
     if (!fecha) {
@@ -198,9 +198,9 @@ router.get('/slots', verificarToken, async (req, res) => {
  * GET /api/horarios/configuracion
  * Obtener configuración general de citas
  */
-router.get('/configuracion', verificarToken, async (req, res) => {
+router.get('/configuracion', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
 
     const inmobiliaria = await prisma.inmobiliaria.findUnique({
       where: { id: inmobiliariaId },
@@ -223,9 +223,9 @@ router.get('/configuracion', verificarToken, async (req, res) => {
  * PATCH /api/horarios/configuracion
  * Actualizar configuración general
  */
-router.patch('/configuracion', verificarToken, async (req, res) => {
+router.patch('/configuracion', authenticateToken, async (req, res) => {
   try {
-    const { inmobiliariaId } = req.usuario;
+    const { inmobiliariaId } = req.user;
     const { duracionCitaMin, tiempoAntelacionMin, diasConCitasAdelante, horasAutoresumeBotPausa } = req.body;
 
     const updates = {};
