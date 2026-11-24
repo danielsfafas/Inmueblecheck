@@ -166,8 +166,11 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      // Primer mensaje del bot CON DIVULGACIÓN DE IA (requisito legal)
-      const mensajeBienvenida = generarMensajeBienvenida(prospecto.inmobiliaria.nombre);
+      // Primer contacto: mensaje completo con saludo + disclosure + menú + hints
+      const mensajeBienvenida = generarMensajeBienvenida(
+        prospecto.inmobiliaria.nombre,
+        prospecto.nombre
+      );
       
       await prisma.mensaje.create({
         data: {
@@ -178,8 +181,22 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      console.log(`📤 DECISIÓN: Enviar mensaje de bienvenida + aviso privacidad a ${telefono}`);
+      console.log(`📤 DECISIÓN: Enviar mensaje de bienvenida completo (primer contacto) a ${telefono}`);
       await enviarMensajeWhatsApp(numeroReceptor, telefono, mensajeBienvenida, remoteJid);
+      
+      // Registrar actividad de primer contacto
+      await prisma.actividad.create({
+        data: {
+          inmobiliariaId: prospecto.inmobiliariaId,
+          prospectoId: prospecto.id,
+          tipo: 'MENSAJE',
+          titulo: 'Primer contacto WhatsApp',
+          descripcion: `Primer mensaje del cliente: ${mensaje.substring(0, 100)}`,
+        },
+      });
+      
+      // Return: no generar segunda respuesta para primer contacto
+      return;
     }
 
     // Guardar mensaje del prospecto

@@ -4,71 +4,93 @@ import { generarMensajeBienvenida } from '../src/utils/botMessages.js';
 describe('Bot Simulator - Divulgación de IA (Requisito Legal LFPDPPP)', () => {
   describe('generarMensajeBienvenida - Función compartida', () => {
     it('debe incluir divulgación de que es un sistema de IA', () => {
-      const mensaje = generarMensajeBienvenida('Casas Hidalgo');
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Juan');
       
-      expect(mensaje).toContain('asistente virtual');
-      expect(mensaje).toContain('sistema automatizado');
-      expect(mensaje).toContain('inteligencia artificial');
+      expect(mensaje).toContain('asistente automatizado');
+      expect(mensaje).toContain('impulsado por IA');
+    });
+
+    it('debe incluir saludo personalizado con nombre del prospecto', () => {
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Daniel Ortega');
+      
+      expect(mensaje).toContain('¡Hola Daniel Ortega!');
+      expect(mensaje).toContain('Bienvenido');
+    });
+
+    it('debe incluir menú de opciones completo', () => {
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Juan');
+      
+      expect(mensaje).toContain('Puedo mostrarte:');
+      expect(mensaje).toContain('Propiedades disponibles');
+      expect(mensaje).toContain('Información de precios');
+      expect(mensaje).toContain('Opciones de financiamiento');
+      expect(mensaje).toContain('Agendar una visita');
     });
 
     it('debe incluir comando AGENTE para escalamiento humano', () => {
-      const mensaje = generarMensajeBienvenida('Casas Hidalgo');
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Juan');
       
       expect(mensaje).toContain('AGENTE');
-      expect(mensaje).toMatch(/hablar con una persona|contactar.*persona|ejecutivo/i);
+      expect(mensaje).toMatch(/hablar con una persona/i);
     });
 
     it('debe incluir comando BAJA para opt-out (derecho ARCO)', () => {
-      const mensaje = generarMensajeBienvenida('Casas Hidalgo');
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Juan');
       
       expect(mensaje).toContain('BAJA');
-      expect(mensaje).toMatch(/no.*recibir.*mensajes|dejar.*contactar/i);
+      expect(mensaje).toMatch(/no recibir más mensajes/i);
     });
 
     it('debe incluir el nombre de la inmobiliaria', () => {
       const nombreInmobiliaria = 'Propiedades del Norte';
-      const mensaje = generarMensajeBienvenida(nombreInmobiliaria);
+      const mensaje = generarMensajeBienvenida(nombreInmobiliaria, 'Juan');
       
       expect(mensaje).toContain(nombreInmobiliaria);
     });
 
-    it('debe incluir tanto AGENTE como BAJA en el mismo mensaje', () => {
-      const mensaje = generarMensajeBienvenida('Test Inmobiliaria');
+    it('debe ser UN SOLO mensaje completo (no dos mensajes separados)', () => {
+      const mensaje = generarMensajeBienvenida('Casas Hidalgo', 'Daniel Ortega');
       
-      // Ambos comandos deben aparecer para cumplir con transparencia legal
-      expect(mensaje).toContain('AGENTE');
+      // Debe contener TODO en un mensaje:
+      expect(mensaje).toContain('¡Hola Daniel Ortega!'); // Saludo personalizado
+      expect(mensaje).toContain('asistente automatizado'); // Disclosure
+      expect(mensaje).toContain('Puedo mostrarte:'); // Menú
+      expect(mensaje).toContain('AGENTE'); // Hints
       expect(mensaje).toContain('BAJA');
     });
   });
 
   describe('Lógica de respuestas en primera interacción', () => {
-    it('en primera interacción debe retornar array con bienvenida y respuesta', () => {
+    it('en primera interacción debe retornar solo bienvenida completa (no duplicar)', () => {
       const esPrimeraInteraccion = true;
-      const respuestaBot = 'Tenemos varias opciones disponibles...';
       const nombreInmobiliaria = 'Casas Hidalgo';
+      const nombreProspecto = 'Juan Pérez';
 
       const respuestas = esPrimeraInteraccion
-        ? [generarMensajeBienvenida(nombreInmobiliaria), respuestaBot]
-        : [respuestaBot];
+        ? [generarMensajeBienvenida(nombreInmobiliaria, nombreProspecto)]
+        : ['Respuesta bot'];
 
-      expect(respuestas).toHaveLength(2);
-      expect(respuestas[0]).toContain('asistente virtual');
+      // Solo UN mensaje en primer contacto (completo)
+      expect(respuestas).toHaveLength(1);
+      expect(respuestas[0]).toContain('¡Hola Juan Pérez!');
+      expect(respuestas[0]).toContain('asistente automatizado');
+      expect(respuestas[0]).toContain('Puedo mostrarte:');
       expect(respuestas[0]).toContain('AGENTE');
       expect(respuestas[0]).toContain('BAJA');
-      expect(respuestas[1]).toBe(respuestaBot);
     });
 
-    it('en interacciones subsecuentes solo retorna la respuesta', () => {
+    it('en interacciones subsecuentes solo retorna la respuesta del bot', () => {
       const esPrimeraInteraccion = false;
       const respuestaBot = '¿Te gustaría ver alguna en específico?';
-      const nombreInmobiliaria = 'Casas Hidalgo';
 
       const respuestas = esPrimeraInteraccion
-        ? [generarMensajeBienvenida(nombreInmobiliaria), respuestaBot]
+        ? [generarMensajeBienvenida('Casas Hidalgo', 'Juan')]
         : [respuestaBot];
 
       expect(respuestas).toHaveLength(1);
       expect(respuestas[0]).toBe(respuestaBot);
+      // NO debe contener disclosure en mensajes posteriores
+      expect(respuestas[0]).not.toContain('asistente automatizado');
     });
   });
 });

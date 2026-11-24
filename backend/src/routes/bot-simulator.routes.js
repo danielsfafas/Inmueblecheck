@@ -89,8 +89,11 @@ router.post('/mensaje', async (req, res, next) => {
         },
       });
 
-      // Mensaje de bienvenida con divulgación de IA (requisito legal)
-      const mensajeBienvenida = generarMensajeBienvenida(prospecto.inmobiliaria.nombre);
+      // Primer contacto: mensaje completo con saludo + disclosure + menú + hints
+      const mensajeBienvenida = generarMensajeBienvenida(
+        prospecto.inmobiliaria.nombre,
+        prospecto.nombre
+      );
 
       await prisma.mensaje.create({
         data: {
@@ -208,14 +211,16 @@ router.post('/mensaje', async (req, res, next) => {
       },
     });
 
-    // En primera interacción, enviar tanto el mensaje de bienvenida como la respuesta
+    // En primera interacción, solo enviar mensaje de bienvenida completo (no duplicar)
     const respuestas = esPrimeraInteraccion
-      ? [generarMensajeBienvenida(prospecto.inmobiliaria.nombre), respuestaBot]
+      ? [generarMensajeBienvenida(prospecto.inmobiliaria.nombre, prospecto.nombre)]
       : [respuestaBot];
 
     res.json({
       success: true,
-      respuesta: respuestaBot, // mantener para backward compatibility
+      respuesta: esPrimeraInteraccion 
+        ? generarMensajeBienvenida(prospecto.inmobiliaria.nombre, prospecto.nombre)
+        : respuestaBot,
       respuestas, // array de mensajes a mostrar
       pasadoAHumano,
       dadoDeBaja,

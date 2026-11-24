@@ -2,51 +2,73 @@ import { describe, it, expect } from '@jest/globals';
 
 describe('Bot de WhatsApp - Divulgación de IA (Requisito Legal)', () => {
   
-  function generarMensajePrimerContacto(nombreInmobiliaria) {
-    return `¡Hola! Soy el asistente virtual de ${nombreInmobiliaria}. 🤖\n\n` +
-      `Soy un sistema automatizado impulsado por inteligencia artificial. ` +
-      `Puedo ayudarte con información sobre propiedades, opciones de crédito y más.\n\n` +
-      `¿En qué puedo ayudarte hoy?\n\n` +
-      `💡 Escribe AGENTE para hablar con una persona o BAJA para no recibir más mensajes.`;
+  function generarMensajePrimerContacto(nombreInmobiliaria, nombreProspecto) {
+    return `¡Hola ${nombreProspecto}! 👋 Bienvenido a ${nombreInmobiliaria}.\n\n` +
+      `Soy un asistente automatizado impulsado por IA. ` +
+      `Estoy aquí para ayudarte a encontrar tu propiedad ideal.\n\n` +
+      `Puedo mostrarte:\n` +
+      `🏠 Propiedades disponibles\n` +
+      `💰 Información de precios\n` +
+      `💳 Opciones de financiamiento\n` +
+      `📅 Agendar una visita\n\n` +
+      `¿Qué te gustaría saber?\n\n` +
+      `💡 Escribe *AGENTE* para hablar con una persona o *BAJA* para no recibir más mensajes.`;
   }
 
   it('debe incluir divulgación de que es un sistema de IA', () => {
-    const mensaje = generarMensajePrimerContacto('Casas Hidalgo');
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Juan');
     
-    expect(mensaje).toContain('asistente virtual');
-    expect(mensaje).toContain('sistema automatizado');
-    expect(mensaje).toContain('inteligencia artificial');
+    expect(mensaje).toContain('asistente automatizado');
+    expect(mensaje).toContain('impulsado por IA');
+  });
+
+  it('debe incluir saludo personalizado con nombre', () => {
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Daniel Ortega');
+    
+    expect(mensaje).toContain('¡Hola Daniel Ortega!');
+    expect(mensaje).toContain('Bienvenido');
+  });
+
+  it('debe incluir menú de opciones completo', () => {
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Juan');
+    
+    expect(mensaje).toContain('Propiedades disponibles');
+    expect(mensaje).toContain('Información de precios');
+    expect(mensaje).toContain('Opciones de financiamiento');
+    expect(mensaje).toContain('Agendar una visita');
   });
 
   it('debe incluir instrucciones para hablar con humano (AGENTE)', () => {
-    const mensaje = generarMensajePrimerContacto('Casas Hidalgo');
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Juan');
     
     expect(mensaje).toContain('AGENTE');
     expect(mensaje).toContain('hablar con una persona');
   });
 
   it('debe incluir instrucciones para darse de baja (BAJA)', () => {
-    const mensaje = generarMensajePrimerContacto('Casas Hidalgo');
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Juan');
     
     expect(mensaje).toContain('BAJA');
     expect(mensaje).toContain('no recibir más mensajes');
   });
 
   it('debe incluir el nombre de la inmobiliaria', () => {
-    const mensaje = generarMensajePrimerContacto('Casas Hidalgo');
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Juan');
     
     expect(mensaje).toContain('Casas Hidalgo');
   });
 
-  it('debe ser claro y en español de México', () => {
-    const mensaje = generarMensajePrimerContacto('Test Inmobiliaria');
+  it('debe ser UN SOLO mensaje completo (no dos)', () => {
+    const mensaje = generarMensajePrimerContacto('Casas Hidalgo', 'Daniel Ortega');
     
-    // Debe usar emoji de robot
-    expect(mensaje).toContain('🤖');
+    // Debe contener TODO en un mensaje:
+    expect(mensaje).toContain('¡Hola Daniel Ortega!'); // Saludo personalizado
+    expect(mensaje).toContain('asistente automatizado'); // Disclosure
+    expect(mensaje).toContain('Puedo mostrarte:'); // Menú
+    expect(mensaje).toContain('AGENTE'); // Hints
     
-    // Debe usar lenguaje claro
-    expect(mensaje.length).toBeGreaterThan(100); // Mensaje completo
-    expect(mensaje).toContain('¿En qué puedo ayudarte');
+    // Debe tener longitud adecuada (no muy corto)
+    expect(mensaje.length).toBeGreaterThan(200);
   });
 });
 
