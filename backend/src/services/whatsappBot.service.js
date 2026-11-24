@@ -7,6 +7,24 @@ import {
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 
+/**
+ * Actualizar datos del prospecto cuando el bot aprende información
+ */
+export async function actualizarProspecto(prospectoId, datos) {
+  const datosActualizacion = {};
+  
+  if (datos.presupuesto !== undefined) datosActualizacion.presupuesto = datos.presupuesto;
+  if (datos.formaPago !== undefined) datosActualizacion.formaPago = datos.formaPago;
+  if (datos.creditoPreaprobado !== undefined) datosActualizacion.creditoPreaprobado = datos.creditoPreaprobado;
+  
+  if (Object.keys(datosActualizacion).length > 0) {
+    await prisma.prospecto.update({
+      where: { id: prospectoId },
+      data: datosActualizacion,
+    });
+  }
+}
+
 export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null, numeroWhatsappId = null, remoteJid = null, pushName = null) {
   try {
     console.log(`📱 Mensaje de ${telefono}: ${mensaje}${phoneNumberId ? ` (phoneNumberId: ${phoneNumberId})` : ''}${numeroWhatsappId ? ` (numeroWhatsappId: ${numeroWhatsappId})` : ''}${remoteJid ? ` (remoteJid: ${remoteJid})` : ''}${pushName ? ` (pushName: ${pushName})` : ''}`);
@@ -353,9 +371,15 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
     orderBy: { createdAt: 'desc' },
   });
 
+  // Encontrar última pregunta del bot para contexto
+  const ultimaPreguntaBot = mensajes
+    .filter(m => m.esBot && m.contenido.includes('?'))
+    .slice(-1)[0]?.contenido || null;
+
   return {
     inmobiliaria: prospecto.inmobiliaria,
     prospecto: {
+      id: prospecto.id,
       nombre: prospecto.nombre,
       presupuesto: prospecto.presupuesto,
       formaPago: prospecto.formaPago,
@@ -364,6 +388,7 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
       remitente: m.esBot ? 'bot' : 'cliente',
       contenido: m.contenido,
     })),
+    ultimaPreguntaBot,
     propiedadesDisponibles: propiedades,
   };
 }
