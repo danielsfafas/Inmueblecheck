@@ -119,6 +119,17 @@ export default function MiWhatsAppPage() {
       socket.on('connected', handleConnected);
       socket.on('disconnected', handleDisconnected);
 
+      // Intentar cargar QR existente INMEDIATAMENTE (si ya hay sesión waiting_qr)
+      try {
+        const qrRes = await api.get(`/mi-whatsapp/numeros/${numeroId}/qr`);
+        if (qrRes.data.qr) {
+          console.log('📱 QR existente cargado inmediatamente');
+          setQrData(qrRes.data.qr);
+        }
+      } catch (err) {
+        // No hay QR aún, se esperará evento Socket.IO
+      }
+
       // Iniciar conexión
       const res = await api.post(`/mi-whatsapp/numeros/${numeroId}/connect`);
       
@@ -128,6 +139,21 @@ export default function MiWhatsAppPage() {
         cargarDatos();
         limpiarListeners();
         return;
+      }
+
+      if (res.data.estadoConexion === 'waiting_qr') {
+        // Sesión ya esperando QR, cargar QR si aún no se cargó
+        if (!qrData) {
+          try {
+            const qrRes = await api.get(`/mi-whatsapp/numeros/${numeroId}/qr`);
+            if (qrRes.data.qr) {
+              console.log('📱 QR waiting_qr cargado');
+              setQrData(qrRes.data.qr);
+            }
+          } catch (err) {
+            console.warn('QR aún no disponible');
+          }
+        }
       }
 
       // Polling de respaldo para el QR (cada 3s durante 30s)

@@ -577,10 +577,13 @@ export async function initializeAllSessions(io) {
       where: {
         activo: true,
         proveedor: 'BAILEYS',
+        // Solo restaurar sesiones que estaban conectadas (tienen sessionData)
+        // Evitar loops de QR 408 en startup para números sin conexión previa
+        estadoConexion: 'connected',
       },
     });
 
-    console.log(`📱 ${numerosActivos.length} número(s) activo(s) encontrado(s)`);
+    console.log(`📱 ${numerosActivos.length} sesión(es) conectada(s) a restaurar`);
 
     for (const numero of numerosActivos) {
       try {

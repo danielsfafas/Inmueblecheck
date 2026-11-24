@@ -214,6 +214,12 @@ router.post('/numeros/:id/connect', async (req, res, next) => {
 
     // Verificar si ya hay sesión activa
     const session = getActiveSession(id);
+    if (session && numero.estadoConexion !== 'connected') {
+      return res.json({ 
+        message: 'Esperando escaneo del QR', 
+        estadoConexion: 'waiting_qr' 
+      });
+    }
     if (session) {
       return res.json({
         message: 'Sesión ya activa',
