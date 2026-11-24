@@ -10,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://loc
 export default function MiWhatsAppPage() {
   const [numeros, setNumeros] = useState([]);
   const [listaNegra, setListaNegra] = useState([]);
+  const [listaBlanca, setListaBlanca] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalNuevoOpen, setModalNuevoOpen] = useState(false);
   const [modalQROpen, setModalQROpen] = useState(false);
@@ -17,6 +18,7 @@ export default function MiWhatsAppPage() {
   const [selectedNumeroId, setSelectedNumeroId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [busquedaListaNegra, setBusquedaListaNegra] = useState('');
+  const [busquedaListaBlanca, setBusquedaListaBlanca] = useState('');
 
   useEffect(() => {
     cargarDatos();
@@ -40,13 +42,15 @@ export default function MiWhatsAppPage() {
   const cargarDatos = async (retryCount = 0) => {
     try {
       setLoading(true);
-      const [numerosRes, listaNegraRes] = await Promise.all([
+      const [numerosRes, listaNegraRes, listaBlancaRes] = await Promise.all([
         api.get('/mi-whatsapp/numeros'),
         api.get('/mi-whatsapp/lista-negra'),
+        api.get('/mi-whatsapp/lista-blanca'),
       ]);
 
       setNumeros(numerosRes.data || []);
       setListaNegra(listaNegraRes.data || []);
+      setListaBlanca(listaBlancaRes.data || []);
     } catch (err) {
       console.error('Error cargando datos:', err);
       
@@ -219,12 +223,52 @@ export default function MiWhatsAppPage() {
     }
   };
 
+  const agregarListaBlanca = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    try {
+      await api.post('/mi-whatsapp/lista-blanca', {
+        numero: formData.get('numero'),
+        nombre: formData.get('nombre'),
+        nota: formData.get('nota'),
+      });
+
+      toast.success('Número agregado a lista blanca');
+      e.target.reset();
+      cargarDatos();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al agregar');
+    }
+  };
+
+  const eliminarListaBlanca = async (id) => {
+    if (!confirm('¿Eliminar de lista blanca?')) return;
+
+    try {
+      await api.delete(`/mi-whatsapp/lista-blanca/${id}`);
+      toast.success('Eliminado de lista blanca');
+      cargarDatos();
+    } catch (err) {
+      toast.error('Error al eliminar');
+    }
+  };
+
   const listaNegraFiltrada = listaNegra.filter((item) => {
     if (!busquedaListaNegra) return true;
     const busqueda = busquedaListaNegra.toLowerCase();
     return (
       item.numeroRemitente.includes(busqueda) ||
       (item.nombreContacto && item.nombreContacto.toLowerCase().includes(busqueda))
+    );
+  });
+
+  const listaBlancaFiltrada = listaBlanca.filter((item) => {
+    if (!busquedaListaBlanca) return true;
+    const busqueda = busquedaListaBlanca.toLowerCase();
+    return (
+      item.numero.includes(busqueda) ||
+      (item.nombre && item.nombre.toLowerCase().includes(busqueda))
     );
   });
 
@@ -433,6 +477,113 @@ export default function MiWhatsAppPage() {
                   </div>
                   <button
                     onClick={() => eliminarListaNegra(item.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Lista Blanca (Whitelist) */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b">
+          <h2 className="text-xl font-semibold text-gray-900">Mi Lista Blanca</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Si la lista está vacía, el bot contesta a todos. Si agregas números, solo contestará a esos.
+          </p>
+          
+          {/* Status line */}
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span className="font-medium">
+              {listaBlanca.length === 0
+                ? 'Modo: Todos (lista vacía)'
+                : `Modo: Solo ${listaBlanca.length} número${listaBlanca.length > 1 ? 's' : ''} permitido${listaBlanca.length > 1 ? 's' : ''}`
+              }
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* Formulario */}
+          <form onSubmit={agregarListaBlanca} className="mb-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                type="text"
+                name="numero"
+                placeholder="Número (ej: +5215512345678)"
+                required
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <input
+                type="text"
+                name="nombre"
+                placeholder="Nombre (opcional)"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <input
+                type="text"
+                name="nota"
+                placeholder="Nota (opcional)"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full md:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Agregar a Lista Blanca
+            </button>
+          </form>
+
+          {/* Búsqueda */}
+          {listaBlanca.length > 0 && (
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar en lista blanca..."
+                  value={busquedaListaBlanca}
+                  onChange={(e) => setBusquedaListaBlanca(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Lista */}
+          {listaBlancaFiltrada.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">
+              {listaBlanca.length === 0 ? 'No hay números en lista blanca - El bot responde a todos' : 'No se encontraron resultados'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {listaBlancaFiltrada.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{item.numero}</span>
+                      {item.nombre && (
+                        <span className="text-sm text-gray-600">({item.nombre})</span>
+                      )}
+                    </div>
+                    {item.nota && (
+                      <p className="text-sm text-gray-500 mt-1">{item.nota}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">
+                      Agregado: {new Date(item.createdAt).toLocaleDateString('es-MX')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => eliminarListaBlanca(item.id)}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
