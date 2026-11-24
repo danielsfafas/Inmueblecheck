@@ -10,15 +10,18 @@ import {
   Menu,
   X,
   Bot,
-  Smartphone
+  Smartphone,
+  MessageCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import NotificationBell from '../NotificationBell';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: Home },
   { name: 'Prospectos', href: '/admin/prospectos', icon: Users },
   { name: 'Propiedades', href: '/admin/propiedades', icon: Building2 },
+  { name: 'Conversaciones', href: '/admin/conversaciones', icon: MessageCircle },
   { name: 'Recordatorios', href: '/admin/recordatorios', icon: Bell },
   { name: 'Mi WhatsApp', href: '/admin/mi-whatsapp', icon: Smartphone },
   { name: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
@@ -104,6 +107,7 @@ export default function DashboardLayout() {
                 <p className="text-sm font-medium text-gray-900">{user?.nombre}</p>
                 <p className="text-xs text-gray-500">{user?.rol}</p>
               </div>
+              <NotificationBell />
               <button
                 onClick={handleLogout}
                 className="p-2 text-gray-400 hover:text-gray-600"

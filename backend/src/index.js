@@ -28,6 +28,8 @@ import botSimulatorRoutes from './routes/bot-simulator.routes.js';
 import propiedadVideosRoutes from './routes/propiedad-videos.routes.js';
 import propiedadFotosRoutes from './routes/propiedad-fotos.routes.js';
 import miWhatsappRoutes from './routes/mi-whatsapp.routes.js';
+import conversacionesRoutes from './routes/conversaciones.routes.js';
+import notificacionesRoutes from './routes/notificaciones.routes.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -124,6 +126,8 @@ app.use('/api/reportes', reporteRoutes);
 app.use('/api/consentimientos', consentimientoRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/bot-simulator', botSimulatorRoutes);
+app.use('/api/conversaciones', conversacionesRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
 
 // Middleware de errores
 app.use(errorHandler);

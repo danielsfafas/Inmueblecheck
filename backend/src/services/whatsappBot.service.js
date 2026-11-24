@@ -7,6 +7,7 @@ import {
   debeAtenderSegunListaBlanca,
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
+import { crearNotificacion, notificarAsesorPorWhatsApp } from './notificaciones.service.js';
 
 /**
  * Actualizar datos del prospecto cuando el bot aprende información
@@ -135,18 +136,24 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
       return;
     }
 
-    // Buscar conversación activa (no pasada a humano, del mismo número WhatsApp receptor)
+    // Buscar conversación activa del mismo número WhatsApp receptor
+    // FIX: NO filtrar por pasadoAHumano para evitar crear conversación nueva después AGENTE
     let conversacion = await prisma.conversacion.findFirst({
       where: {
         prospectoId: prospecto.id,
         numeroWhatsappId: numeroReceptor.id,
-        pasadoAHumano: false,
       },
       orderBy: { createdAt: 'desc' },
       include: {
         mensajes: {
           take: 1,
           orderBy: { createdAt: 'asc' },
+        },
+        prospecto: {
+          include: {
+            ejecutivo: true,
+            inmobiliaria: true,
+          },
         },
       },
     });
@@ -209,6 +216,38 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
       },
     });
 
+    // Verificar si bot está pausado (escalamiento AGENTE)
+    const ahora = new Date();
+    if (conversacion.botPausadoHasta) {
+      if (conversacion.botPausadoHasta > ahora) {
+        // Bot pausado: guardar mensaje pero NO responder
+        console.log(`⏸️ Bot pausado hasta ${conversacion.botPausadoHasta}. Mensaje guardado sin respuesta.`);
+        return;
+      } else {
+        // Auto-resume: botPausadoHasta pasó
+        console.log(`▶️ Auto-resume: botPausadoHasta ${conversacion.botPausadoHasta} expiró. Reactivando bot...`);
+        conversacion = await prisma.conversacion.update({
+          where: { id: conversacion.id },
+          data: {
+            botPausadoHasta: null,
+            pasadoAHumano: false,
+          },
+          include: {
+            mensajes: {
+              take: 1,
+              orderBy: { createdAt: 'asc' },
+            },
+            prospecto: {
+              include: {
+                ejecutivo: true,
+                inmobiliaria: true,
+              },
+            },
+          },
+        });
+      }
+    }
+
     // Detectar comandos especiales
     const mensajeNormalizado = mensaje.toUpperCase().trim();
 
@@ -258,9 +297,28 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
     if (mensajeNormalizado === 'AGENTE' || mensajeNormalizado === 'HUMANO' || 
         mensajeNormalizado === 'ASESOR' || mensajeNormalizado.includes('HABLAR CON')) {
       
+      // Limpiar flujo activo si existe (abortar booking, etc.)
+      if (conversacion.flujoBot) {
+        console.log(`🔄 Abortando flujo activo: ${conversacion.flujoBot}`);
+        await prisma.conversacion.update({
+          where: { id: conversacion.id },
+          data: {
+            flujoBot: null,
+            flujoEstado: null,
+          },
+        });
+      }
+
+      // Pausar bot: calcular botPausadoHasta
+      const horasAutoresume = prospecto.inmobiliaria.horasAutoresumeBotPausa || 24;
+      const botPausadoHasta = new Date(Date.now() + horasAutoresume * 3600000);
+
       await prisma.conversacion.update({
         where: { id: conversacion.id },
-        data: { pasadoAHumano: true },
+        data: {
+          pasadoAHumano: true,
+          botPausadoHasta,
+        },
       });
 
       await prisma.actividad.create({
@@ -273,6 +331,48 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
+      // Obtener últimos 3 mensajes del cliente para contexto
+      const ultimosMensajes = await prisma.mensaje.findMany({
+        where: {
+          conversacionId: conversacion.id,
+          esBot: false,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+      });
+
+      // Obtener propiedad de interés si existe
+      let propiedadInteres = null;
+      const interes = await prisma.interes.findFirst({
+        where: { prospectoId: prospecto.id },
+        include: { propiedad: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (interes) {
+        propiedadInteres = interes.propiedad;
+      }
+
+      // Notificar asesor por WhatsApp
+      const asesor = await notificarAsesorPorWhatsApp({
+        numeroWhatsappId: numeroReceptor.id,
+        prospecto: conversacion.prospecto,
+        conversacion,
+        propiedadInteres,
+        ultimosMensajes: ultimosMensajes.reverse(),
+      });
+
+      // Crear notificación en panel + Socket.IO
+      if (asesor) {
+        await crearNotificacion({
+          inmobiliariaId: prospecto.inmobiliariaId,
+          usuarioId: asesor.id,
+          tipo: 'AGENTE_SOLICITADO',
+          titulo: `${prospecto.nombre} solicita atención`,
+          mensaje: `El prospecto ${prospecto.nombre} (${prospecto.telefono}) solicitó hablar con un asesor.`,
+          enlace: `/admin/conversaciones/${conversacion.id}`,
+        });
+      }
+
       const respuesta = `Perfecto, ${prospecto.nombre}. En breve uno de nuestros asesores se pondrá en contacto contigo. Gracias por tu interés.`;
       
       await prisma.mensaje.create({
@@ -284,7 +384,7 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
         },
       });
 
-      console.log(`📤 DECISIÓN: Enviar confirmación de solicitud AGENTE/HUMANO a ${telefono}`);
+      console.log(`📤 DECISIÓN: Enviar confirmación de solicitud AGENTE/HUMANO a ${telefono} (pausado hasta ${botPausadoHasta})`);
       await enviarMensajeWhatsApp(numeroReceptor, telefono, respuesta, remoteJid);
       return;
     }
