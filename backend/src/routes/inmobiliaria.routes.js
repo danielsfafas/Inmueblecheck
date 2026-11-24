@@ -72,6 +72,7 @@ router.get('/usuarios', requireRole('ADMIN', 'SUPERVISOR'), async (req, res, nex
         email: true,
         rol: true,
         activo: true,
+        telefonoWhatsapp: true,
         createdAt: true,
       },
       orderBy: { nombre: 'asc' },
@@ -115,6 +116,59 @@ router.post('/usuarios', requireRole('ADMIN'), async (req, res, next) => {
     });
 
     res.status(201).json(usuario);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Actualizar teléfono WhatsApp de usuario (solo admin/owner)
+router.patch('/usuarios/:id', requireRole('ADMIN', 'SUPERVISOR'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { telefonoWhatsapp } = req.body;
+    
+    // Solo permitir actualizar telefonoWhatsapp
+    if (telefonoWhatsapp === undefined) {
+      return res.status(400).json({ error: 'telefonoWhatsapp requerido' });
+    }
+
+    // Validar formato E.164-ish (opcional: +, luego dígitos, 10-15 dígitos)
+    if (telefonoWhatsapp && !/^\+?[0-9]{10,15}$/.test(telefonoWhatsapp)) {
+      return res.status(400).json({ 
+        error: 'Formato inválido. Use formato internacional: +5215512345678 o 5512345678' 
+      });
+    }
+
+    // Verificar que el usuario pertenece a la misma inmobiliaria (scoping)
+    const usuarioExistente = await prisma.usuario.findUnique({
+      where: { id },
+      select: { inmobiliariaId: true },
+    });
+
+    if (!usuarioExistente) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (usuarioExistente.inmobiliariaId !== req.user.inmobiliariaId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    // Actualizar solo telefonoWhatsapp
+    const usuarioActualizado = await prisma.usuario.update({
+      where: { id },
+      data: { telefonoWhatsapp },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        activo: true,
+        telefonoWhatsapp: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(usuarioActualizado);
   } catch (error) {
     next(error);
   }

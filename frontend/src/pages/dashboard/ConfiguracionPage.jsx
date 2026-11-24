@@ -19,7 +19,7 @@ export default function ConfiguracionPage() {
       setLoading(true);
       const [configRes, usuariosRes] = await Promise.all([
         api.get('/inmobiliaria'),
-        api.get('/auth/usuarios'),
+        api.get('/inmobiliaria/usuarios'),
       ]);
       setConfig(configRes.data);
       setUsuarios(usuariosRes.data);
@@ -45,12 +45,12 @@ export default function ConfiguracionPage() {
 
   const actualizarTelefonoUsuario = async (usuarioId, telefono) => {
     try {
-      await api.patch(`/auth/usuarios/${usuarioId}`, { telefonoWhatsapp: telefono });
+      await api.patch(`/inmobiliaria/usuarios/${usuarioId}`, { telefonoWhatsapp: telefono });
       toast.success('Teléfono actualizado');
       await cargarConfiguracion();
       setEditandoUsuario(null);
     } catch (error) {
-      toast.error('Error al actualizar teléfono');
+      toast.error(error.response?.data?.error || 'Error al actualizar teléfono');
     }
   };
 
