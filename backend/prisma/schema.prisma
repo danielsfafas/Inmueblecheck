@@ -35,6 +35,12 @@ model Inmobiliaria {
   // Opciones
   permiteCookies            Boolean   @default(false)
   
+  // Configuración bot y citas
+  horasAutoresumeBotPausa   Int       @default(24)
+  duracionCitaMin           Int       @default(60)
+  tiempoAntelacionMin       Int       @default(120)
+  diasConCitasAdelante      Int       @default(45)
+  
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   
@@ -46,6 +52,10 @@ model Inmobiliaria {
   consentimientos           Consentimiento[]
   actividades               Actividad[]
   recordatorios             Recordatorio[]
+  notificaciones            Notificacion[]
+  citas                     Cita[]
+  horariosCitas             HorarioCitas[]
+  cierresCalendario         CierreCalendario[]
 
   @@index([email])
   @@index([slug])
@@ -62,6 +72,9 @@ model Usuario {
   rol               RolUsuario   @default(EJECUTIVO)
   activo            Boolean      @default(true)
   
+  // WhatsApp para notificaciones de escalamiento
+  telefonoWhatsapp  String?
+  
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   
@@ -73,6 +86,8 @@ model Usuario {
   numerosWhatsapp         NumeroWhatsapp[]
   listaNegra              ListaNegra[]
   listaBlanca             ListaBlanca[]
+  notificaciones          Notificacion[]
+  citasAsignadas          Cita[]
 
   @@unique([inmobiliariaId, email])
   @@index([inmobiliariaId])
@@ -154,6 +169,7 @@ model Propiedad {
   // Relaciones
   intereses             Interes[]
   videos                PropiedadVideo[]
+  citas                 Cita[]
 
   @@index([inmobiliariaId])
   @@index([estado])
@@ -235,6 +251,7 @@ model Prospecto {
   consentimientos       Consentimiento[]
   intereses             Interes[]
   recordatorios         Recordatorio[]
+  citas                 Cita[]
 
   @@index([inmobiliariaId])
   @@index([telefono])
@@ -291,6 +308,12 @@ model Conversacion {
   
   atendidoPorBot    Boolean         @default(true)
   pasadoAHumano     Boolean         @default(false)
+  botPausadoHasta   DateTime?
+  
+  // Estado del flujo de bot (booking, etc)
+  flujoBot          String?
+  flujoEstado       Json?
+  
   resumenBot        String?         @db.Text
   
   createdAt         DateTime        @default(now())
@@ -303,6 +326,7 @@ model Conversacion {
   @@index([prospectoId])
   @@index([idExterno])
   @@index([numeroWhatsappId])
+  @@index([botPausadoHasta])
 }
 
 model Mensaje {
@@ -500,4 +524,137 @@ model ListaBlanca {
   
   @@unique([usuarioId, numero])
   @@index([usuarioId])
+}
+
+// NOTIFICACIONES
+
+model Notificacion {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  tipo              TipoNotificacion
+  titulo            String
+  mensaje           String          @db.Text
+  enlace            String?
+  
+  leida             Boolean         @default(false)
+  leidaAt           DateTime?
+  
+  createdAt         DateTime        @default(now())
+  
+  @@index([inmobiliariaId])
+  @@index([usuarioId])
+  @@index([leida])
+  @@index([createdAt])
+}
+
+enum TipoNotificacion {
+  AGENTE_SOLICITADO
+  CITA_CREADA
+  CITA_CANCELADA
+  MENSAJE_NUEVO
+  SISTEMA
+}
+
+// CITAS Y VISITAS
+
+model Cita {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto       @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  propiedadId       String?
+  propiedad         Propiedad?      @relation(fields: [propiedadId], references: [id], onDelete: SetNull)
+  
+  asesorId          String?
+  asesor            Usuario?        @relation(fields: [asesorId], references: [id], onDelete: SetNull)
+  
+  fecha             DateTime        // Date only (local), time in hora
+  hora              String          // HH:MM local
+  duracionMin       Int             @default(60)
+  
+  estado            EstadoCita      @default(PENDIENTE)
+  origen            OrigenCita      @default(WHATSAPP)
+  
+  notas             String?         @db.Text
+  motivoCancelacion String?
+  
+  confirmadaAt      DateTime?
+  canceladaAt       DateTime?
+  recordatorioEnviadoAt DateTime?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([propiedadId])
+  @@index([asesorId])
+  @@index([fecha])
+  @@index([estado])
+}
+
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  COMPLETADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+enum OrigenCita {
+  WHATSAPP
+  ADMIN
+  WEB
+}
+
+model HorarioCitas {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  // ISO day of week (1=Monday, 7=Sunday)
+  diaSemana         Int
+  
+  activo            Boolean         @default(true)
+  horaInicio        String          // HH:MM
+  horaFin           String          // HH:MM
+  
+  // Lunch break opcional
+  pausaInicio       String?         // HH:MM
+  pausaFin          String?         // HH:MM
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([inmobiliariaId, diaSemana])
+  @@index([inmobiliariaId])
+}
+
+model CierreCalendario {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  fecha             DateTime        // Date
+  diaCompleto       Boolean         @default(true)
+  
+  // Si no es día completo
+  horaInicio        String?         // HH:MM
+  horaFin           String?         // HH:MM
+  
+  motivo            String
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([inmobiliariaId])
+  @@index([fecha])
 }
