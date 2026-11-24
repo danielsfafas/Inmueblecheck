@@ -8,6 +8,7 @@ import P from 'pino';
 import path from 'path';
 import fs from 'fs/promises';
 import { Boom } from '@hapi/boom';
+import NodeCache from 'node-cache';
 import { prisma } from '../index.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { procesarMensajeBot } from './whatsappBot.service.js';
@@ -23,6 +24,13 @@ const messageLimits = new Map();
 
 // Store de mensajes procesados (deduplicación): { messageId: timestamp }
 const processedMessages = new Map();
+
+// Store de retry de mensajes (Baileys msgRetryCounterCache)
+// Debe implementar get/set/del para evitar "msgRetryCache.set is not a function"
+const msgRetryCache = new NodeCache({
+  stdTTL: 3600, // 1 hora TTL
+  checkperiod: 600, // Check cada 10 minutos
+});
 
 const MENSAJE_LIMITE_POR_MINUTO = 30;
 
@@ -128,7 +136,7 @@ export async function startBaileysSession(numeroWhatsappId, io) {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, logger),
       },
-      msgRetryCounterCache: {},
+      msgRetryCounterCache: msgRetryCache, // NodeCache con get/set/del
       generateHighQualityLinkPreview: true,
       markOnlineOnConnect: false, // No aparecer online automáticamente
     });
