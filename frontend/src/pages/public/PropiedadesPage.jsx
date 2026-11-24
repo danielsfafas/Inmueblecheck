@@ -5,6 +5,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { mediaUrl } from '../../utils/mediaUrl';
 import { Building2, Bed, Bath, Car, MapPin, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PublicHeader from '../../components/PublicHeader';
 
 export default function PropiedadesPage() {
   const { slug } = useParams();
@@ -50,17 +51,7 @@ export default function PropiedadesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="px-4 py-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2">
-              <Building2 className="w-8 h-8 text-primary-600" />
-              <span className="text-2xl font-bold text-gray-900">InmuebleCheck</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Propiedades disponibles</h1>

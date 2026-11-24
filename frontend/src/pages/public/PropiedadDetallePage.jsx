@@ -15,6 +15,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PublicHeader from '../../components/PublicHeader';
 
 export default function PropiedadDetallePage() {
   const { slug, id } = useParams();
@@ -74,15 +75,7 @@ export default function PropiedadDetallePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="px-4 py-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <Link to="/propiedades" className="flex items-center space-x-2 text-gray-700 hover:text-primary-600">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Volver a propiedades</span>
-          </Link>
-        </div>
-      </header>
+      <PublicHeader backTo={`/i/${slugInmobiliaria}/propiedades`} />
 
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-3">
