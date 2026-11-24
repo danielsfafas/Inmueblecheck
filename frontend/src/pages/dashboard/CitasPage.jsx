@@ -43,8 +43,10 @@ function OrigenBadge({ origen }) {
   );
 }
 
+// La fecha de la cita es un día (sin hora): se toma solo yyyy-MM-dd para que no se
+// recorra un día cuando el servidor guarda medianoche UTC y el navegador está en CDMX.
 function fechaDeCita(cita) {
-  return parseISO(cita.fecha);
+  return parseISO(String(cita.fecha).slice(0, 10));
 }
 
 export default function CitasPage() {
@@ -472,7 +474,7 @@ function CancelarCitaDialog({ cita, onClose, onDone }) {
           <p className="text-sm text-gray-700">
             <span className="font-medium text-gray-900">{cita.prospecto.nombre}</span>
             {' · '}
-            <span>{(() => { const t = format(parseISO(cita.fecha), "EEEE d 'de' MMMM", { locale: es }); return t.charAt(0).toUpperCase() + t.slice(1); })()}</span>
+            <span>{(() => { const t = format(fechaDeCita(cita), "EEEE d 'de' MMMM", { locale: es }); return t.charAt(0).toUpperCase() + t.slice(1); })()}</span>
             {' a las '}<span className="tabular-nums">{cita.hora}</span>
           </p>
           <div>

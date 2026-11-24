@@ -27,7 +27,7 @@ export default function CitaFormModal({ isOpen, onClose, onSaved, cita = null, f
   const [prospectoId, setProspectoId] = useState(cita?.prospecto?.id || '');
   const [nuevo, setNuevo] = useState({ nombre: '', telefono: '' });
   const [propiedadId, setPropiedadId] = useState(cita?.propiedad?.id || '');
-  const [fecha, setFecha] = useState(cita ? format(parseISO(cita.fecha), 'yyyy-MM-dd') : fechaInicial || hoyISO());
+  const [fecha, setFecha] = useState(cita ? String(cita.fecha).slice(0, 10) : fechaInicial || hoyISO());
   const [horaElegida, setHora] = useState(cita?.hora || '');
   const [asesorId, setAsesorId] = useState(cita?.asesor?.id || '');
   const [notas, setNotas] = useState(cita?.notas || '');
@@ -107,7 +107,7 @@ export default function CitaFormModal({ isOpen, onClose, onSaved, cita = null, f
   const horasMostradas = useMemo(() => {
     const libres = slots.filter((s) => s.disponible).map((s) => s.hora);
     // Al editar, la hora actual de la cita sigue siendo válida aunque cuente como ocupada
-    if (editando && cita && fecha === format(parseISO(cita.fecha), 'yyyy-MM-dd') && !libres.includes(cita.hora)) {
+    if (editando && cita && fecha === String(cita.fecha).slice(0, 10) && !libres.includes(cita.hora)) {
       libres.push(cita.hora);
       libres.sort();
     }
