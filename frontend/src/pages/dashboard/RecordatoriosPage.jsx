@@ -55,11 +55,11 @@ export default function RecordatoriosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Recordatorios</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Recordatorios</h1>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
         >
           <Plus className="w-5 h-5 mr-2" />
           Nuevo Recordatorio
@@ -111,14 +111,14 @@ export default function RecordatoriosPage() {
           recordatorios.map((recordatorio) => (
             <div
               key={recordatorio.id}
-              className={`p-6 bg-white rounded-lg shadow ${
+              className={`p-4 sm:p-6 bg-white rounded-lg shadow ${
                 estaVencido(recordatorio.fechaRecordatorio) && !recordatorio.completado
-                  ? 'border-l-4 border-red-500'
+                  ? 'ring-1 ring-red-300'
                   : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     {!recordatorio.completado && estaVencido(recordatorio.fechaRecordatorio) && (
                       <span className="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded">
@@ -159,7 +159,7 @@ export default function RecordatoriosPage() {
                 {!recordatorio.completado && (
                   <button
                     onClick={() => marcarCompletado(recordatorio.id)}
-                    className="flex items-center px-4 py-2 ml-4 text-sm font-medium text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
+                    className="flex items-center justify-center self-stretch sm:self-start min-h-[44px] px-4 py-2 sm:ml-4 text-sm font-medium text-white transition-colors bg-green-700 rounded-lg hover:bg-green-800"
                   >
                     <Check className="w-4 h-4 mr-2" />
                     Completar

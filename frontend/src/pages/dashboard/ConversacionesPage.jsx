@@ -89,23 +89,27 @@ export default function ConversacionesPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
+  const fechaRelativa = (conv) =>
+    formatDistanceToNow(new Date(conv.ultimoMensaje ? conv.ultimoMensaje.fecha : conv.createdAt), {
+      addSuffix: true,
+      locale: es,
+    });
+
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Conversaciones</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Gestiona las conversaciones de WhatsApp con tus prospectos
-          </p>
-        </div>
+    <div>
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Conversaciones</h1>
+        <p className="mt-2 text-sm text-gray-700">
+          Gestiona las conversaciones de WhatsApp con tus prospectos
+        </p>
       </div>
 
-      <div className="mt-6 flex flex-col sm:flex-row gap-4">
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
         <form onSubmit={handleSearch} className="flex-1">
           <label htmlFor="search" className="sr-only">
             Buscar por teléfono o nombre
@@ -127,11 +131,11 @@ export default function ConversacionesPage() {
               </svg>
             </div>
             <input
-              type="text"
+              type="search"
               id="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input-field pl-10"
               placeholder="Buscar por teléfono o nombre..."
             />
           </div>
@@ -140,7 +144,8 @@ export default function ConversacionesPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+          className="input-field sm:w-56"
+          aria-label="Filtrar por estado"
         >
           <option value="all">Todos los estados</option>
           <option value="bot_activo">Bot Activo</option>
@@ -149,112 +154,138 @@ export default function ConversacionesPage() {
         </select>
       </div>
 
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            {conversaciones.length === 0 ? (
-              <div className="text-center py-12">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No hay conversaciones</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Las conversaciones de WhatsApp aparecerán aquí
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                        Teléfono
-                      </th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Nombre
-                      </th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Último Mensaje
-                      </th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Estado
-                      </th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Fecha
-                      </th>
-                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span className="sr-only">Acciones</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {conversaciones.map((conv) => (
-                      <tr
-                        key={conv.id}
-                        onClick={() => navigate(`/admin/conversaciones/${conv.id}`)}
-                        className="hover:bg-gray-50 cursor-pointer"
-                      >
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          {conv.prospectoTelefono}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                          {conv.prospectoNombre}
-                        </td>
-                        <td className="px-3 py-4 text-sm text-gray-500 max-w-md truncate">
-                          {conv.ultimoMensaje ? (
-                            <div className="flex items-center gap-2">
-                              {conv.ultimoMensaje.esBot && (
-                                <span className="text-xs text-gray-400">🤖</span>
-                              )}
-                              <span>{conv.ultimoMensaje.contenido}</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 italic">Sin mensajes</span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          {getStatusBadge(conv.status, conv.botPausadoHasta)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {conv.ultimoMensaje
-                            ? formatDistanceToNow(new Date(conv.ultimoMensaje.fecha), {
-                                addSuffix: true,
-                                locale: es,
-                              })
-                            : formatDistanceToNow(new Date(conv.createdAt), {
-                                addSuffix: true,
-                                locale: es,
-                              })}
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/conversaciones/${conv.id}`);
-                            }}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            Ver detalle
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <div className="mt-6">
+        {conversaciones.length === 0 ? (
+          <div className="text-center py-12">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay conversaciones</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Las conversaciones de WhatsApp aparecerán aquí
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Móvil y tablet: lista tipo bandeja de entrada */}
+            <ul className="lg:hidden divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow ring-1 ring-black/5">
+              {conversaciones.map((conv) => (
+                <li key={conv.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/admin/conversaciones/${conv.id}`)}
+                    className="block w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                        {conv.prospectoTelefono}
+                      </span>
+                      <span className="shrink-0 text-xs text-gray-500">{fechaRelativa(conv)}</span>
+                    </div>
+                    {conv.prospectoNombre && (
+                      <p className="text-sm text-gray-700 truncate">{conv.prospectoNombre}</p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500 line-clamp-2 break-words">
+                      {conv.ultimoMensaje ? (
+                        <>
+                          {conv.ultimoMensaje.esBot && <span className="text-gray-400">Bot: </span>}
+                          {conv.ultimoMensaje.contenido}
+                        </>
+                      ) : (
+                        <span className="italic text-gray-400">Sin mensajes</span>
+                      )}
+                    </p>
+                    <div className="mt-2">{getStatusBadge(conv.status, conv.botPausadoHasta)}</div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {/* Escritorio: tabla */}
+            <div className="hidden lg:block overflow-hidden shadow ring-1 ring-black/5 rounded-lg">
+              <table className="w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                      Teléfono
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Nombre
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Último Mensaje
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Estado
+                    </th>
+                    <th className="hidden xl:table-cell px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Fecha
+                    </th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {conversaciones.map((conv) => (
+                    <tr
+                      key={conv.id}
+                      onClick={() => navigate(`/admin/conversaciones/${conv.id}`)}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 tabular-nums sm:pl-6">
+                        {conv.prospectoTelefono}
+                      </td>
+                      <td className="max-w-[12rem] px-3 py-4 text-sm text-gray-900 truncate">
+                        {conv.prospectoNombre}
+                      </td>
+                      <td className="w-full max-w-0 px-3 py-4 text-sm text-gray-500 truncate">
+                        {conv.ultimoMensaje ? (
+                          <span>
+                            {conv.ultimoMensaje.esBot && (
+                              <span className="text-xs text-gray-400 mr-1">Bot:</span>
+                            )}
+                            {conv.ultimoMensaje.contenido}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 italic">Sin mensajes</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm">
+                        {getStatusBadge(conv.status, conv.botPausadoHasta)}
+                      </td>
+                      <td className="hidden xl:table-cell whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {fechaRelativa(conv)}
+                      </td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/conversaciones/${conv.id}`);
+                          }}
+                          className="text-primary-600 hover:text-primary-800"
+                        >
+                          Ver detalle
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

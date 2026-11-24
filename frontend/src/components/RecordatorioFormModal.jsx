@@ -58,14 +58,15 @@ export default function RecordatorioFormModal({ isOpen, onClose, onSuccess, pros
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-md w-full max-h-[92dvh] overflow-y-auto overscroll-contain pb-safe sm:pb-0">
+        <div className="px-4 sm:px-6 py-2 sm:py-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-blue-600" />
             <h2 className="text-xl font-semibold">Nuevo Recordatorio</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button type="button" onClick={onClose} className="tap-target -mr-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Cerrar">
             <X className="w-5 h-5" />
           </button>
         </div>

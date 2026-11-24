@@ -97,6 +97,52 @@ export default function PropiedadesAdminPage() {
     }
   };
 
+  const renderAcciones = (propiedad, compact = false) => (
+    <div className={compact ? 'flex flex-wrap gap-2' : 'grid grid-cols-2 gap-2 sm:grid-cols-4'}>
+      <button
+        onClick={() => {
+          setEditingPropiedadId(propiedad.id);
+          setFormModalOpen(true);
+        }}
+        className={`inline-flex items-center justify-center ${compact ? 'px-2 py-1 text-xs' : 'min-h-[44px] px-3 text-sm'} font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg`}
+        title="Editar propiedad"
+      >
+        <Edit className={compact ? 'w-3 h-3 mr-1' : 'w-4 h-4 mr-1.5'} />
+        Editar
+      </button>
+      <button
+        onClick={() => {
+          setSelectedPropiedadId(propiedad.id);
+          setFotosManagerOpen(true);
+        }}
+        className={`inline-flex items-center justify-center ${compact ? 'px-2 py-1 text-xs' : 'min-h-[44px] px-3 text-sm'} font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg`}
+        title="Gestionar fotos"
+      >
+        <Image className={compact ? 'w-3 h-3 mr-1' : 'w-4 h-4 mr-1.5'} />
+        Fotos
+      </button>
+      <button
+        onClick={() => {
+          setSelectedPropiedadId(propiedad.id);
+          setVideoManagerOpen(true);
+        }}
+        className={`inline-flex items-center justify-center ${compact ? 'px-2 py-1 text-xs' : 'min-h-[44px] px-3 text-sm'} font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg`}
+        title="Gestionar videos"
+      >
+        <Film className={compact ? 'w-3 h-3 mr-1' : 'w-4 h-4 mr-1.5'} />
+        Videos
+      </button>
+      <button
+        onClick={() => generarVideo(propiedad.id)}
+        className={`inline-flex items-center justify-center ${compact ? 'px-2 py-1 text-xs' : 'min-h-[44px] px-3 text-sm'} font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg`}
+        title="Generar video vertical 9:16"
+      >
+        <Video className={compact ? 'w-3 h-3 mr-1' : 'w-4 h-4 mr-1.5'} />
+        Generar
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -107,21 +153,55 @@ export default function PropiedadesAdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Propiedades</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Propiedades</h1>
         <button
           onClick={() => {
             setEditingPropiedadId(null);
             setFormModalOpen(true);
           }}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
         >
           <Plus className="w-5 h-5 mr-2" />
           Nueva Propiedad
         </button>
       </div>
 
-      <div className="overflow-hidden bg-white rounded-lg shadow">
+      {/* Móvil y tablet: tarjetas */}
+      <ul className="lg:hidden space-y-3">
+        {propiedades.map((propiedad) => (
+          <li key={propiedad.id} className="rounded-lg bg-white p-4 shadow">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 break-words">{propiedad.titulo}</p>
+                <p className="text-sm text-gray-500">
+                  {propiedad.tipo === 'VENTA' ? 'Venta' : 'Renta'}
+                  {(propiedad.colonia || propiedad.ciudad) && ' · '}
+                  {[propiedad.colonia, propiedad.ciudad].filter(Boolean).join(', ')}
+                </p>
+              </div>
+              <span className={`shrink-0 px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(propiedad.estadoPropiedad)}`}>
+                {getEstadoLabel(propiedad.estadoPropiedad)}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <span className="text-lg font-semibold text-gray-900 tabular-nums">{formatCurrency(propiedad.precio)}</span>
+              <span className="flex items-center gap-3 text-sm text-gray-500">
+                <span className="flex items-center"><Eye className="w-4 h-4 mr-1" />{propiedad.vistas || 0}</span>
+                <span>WhatsApp: {propiedad.clicsWhatsapp || 0}</span>
+              </span>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-3">{renderAcciones(propiedad)}</div>
+          </li>
+        ))}
+        {propiedades.length === 0 && (
+          <li className="rounded-lg bg-white p-12 text-center shadow">
+            <p className="text-gray-600">No hay propiedades registradas</p>
+          </li>
+        )}
+      </ul>
+
+      <div className="hidden lg:block overflow-hidden bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -182,49 +262,7 @@ export default function PropiedadesAdminPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingPropiedadId(propiedad.id);
-                        setFormModalOpen(true);
-                      }}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
-                      title="Editar propiedad"
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPropiedadId(propiedad.id);
-                        setFotosManagerOpen(true);
-                      }}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100"
-                      title="Gestionar fotos"
-                    >
-                      <Image className="w-3 h-3 mr-1" />
-                      Fotos
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPropiedadId(propiedad.id);
-                        setVideoManagerOpen(true);
-                      }}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded hover:bg-purple-100"
-                      title="Gestionar videos"
-                    >
-                      <Film className="w-3 h-3 mr-1" />
-                      Videos
-                    </button>
-                    <button
-                      onClick={() => generarVideo(propiedad.id)}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 rounded hover:bg-orange-100"
-                      title="Generar video vertical 9:16"
-                    >
-                      <Video className="w-3 h-3 mr-1" />
-                      Generar
-                    </button>
-                  </div>
+                  {renderAcciones(propiedad, true)}
                 </td>
               </tr>
             ))}

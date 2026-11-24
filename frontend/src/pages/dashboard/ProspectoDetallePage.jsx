@@ -346,8 +346,8 @@ export default function ProspectoDetallePage() {
 
       {/* Modal agregar nota */}
       {modalNota && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md p-6 bg-white rounded-lg">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-4 sm:p-6 pb-safe sm:pb-6 bg-white rounded-t-2xl sm:rounded-lg max-h-[92dvh] overflow-y-auto overscroll-contain">
             <h3 className="mb-4 text-xl font-semibold">Agregar nota</h3>
             <form onSubmit={agregarNota}>
               <div className="mb-4">
@@ -391,8 +391,8 @@ export default function ProspectoDetallePage() {
 
       {/* Modal registrar llamada */}
       {modalLlamada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md p-6 bg-white rounded-lg">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-4 sm:p-6 pb-safe sm:pb-6 bg-white rounded-t-2xl sm:rounded-lg max-h-[92dvh] overflow-y-auto overscroll-contain">
             <h3 className="mb-4 text-xl font-semibold">Registrar llamada</h3>
             <form onSubmit={registrarLlamada}>
               <div className="mb-4">
@@ -438,8 +438,8 @@ export default function ProspectoDetallePage() {
 
       {/* Modal agendar recordatorio */}
       {modalRecordatorio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md p-6 bg-white rounded-lg">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-4 sm:p-6 pb-safe sm:pb-6 bg-white rounded-t-2xl sm:rounded-lg max-h-[92dvh] overflow-y-auto overscroll-contain">
             <h3 className="mb-4 text-xl font-semibold">Agendar recordatorio</h3>
             <form onSubmit={agendarRecordatorio}>
               <div className="mb-4">

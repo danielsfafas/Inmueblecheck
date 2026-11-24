@@ -81,13 +81,13 @@ export default function CitasPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
+    <div>
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Citas</h1>
@@ -99,9 +99,9 @@ export default function CitasPage() {
         <div className="mt-4 sm:mt-0 flex gap-2">
           <button
             onClick={() => setVista('list')}
-            className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium ${
+            className={`inline-flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium ${
               vista === 'list'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
+                ? 'border-primary-600 text-primary-700 bg-primary-50'
                 : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
             }`}
           >
@@ -111,9 +111,9 @@ export default function CitasPage() {
           
           <button
             onClick={() => setVista('week')}
-            className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium ${
+            className={`inline-flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium ${
               vista === 'week'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
+                ? 'border-primary-600 text-primary-700 bg-primary-50'
                 : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
             }`}
           >
@@ -127,7 +127,8 @@ export default function CitasPage() {
         <select
           value={filtros.estado}
           onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-          className="rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+          className="input-field sm:w-56"
+          aria-label="Filtrar por estado"
         >
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
@@ -139,20 +140,82 @@ export default function CitasPage() {
       </div>
 
       {vista === 'list' ? (
-        <div className="mt-8 flow-root">
-          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {citas.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No hay citas</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Las citas agendadas aparecerán aquí
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-300">
+        <div className="mt-6">
+          {citas.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay citas</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Las citas agendadas aparecerán aquí
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Móvil: tarjetas */}
+              <ul className="lg:hidden space-y-3">
+                {citas.map((cita) => (
+                  <li key={cita.id} className="rounded-lg bg-white p-4 shadow ring-1 ring-black/5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                          {format(parseISO(cita.fecha), 'dd/MM/yyyy', { locale: es })} · {cita.hora}
+                        </p>
+                        <p className="mt-0.5 text-sm text-gray-900">{cita.prospecto.nombre}</p>
+                        <p className="text-xs text-gray-500 tabular-nums">{cita.prospecto.telefono}</p>
+                      </div>
+                      <div className="shrink-0">{getEstadoBadge(cita.estado)}</div>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
+                      <dt className="text-gray-500">Propiedad</dt>
+                      <dd className="text-gray-900 min-w-0 break-words">
+                        {cita.propiedad ? (
+                          <>
+                            {cita.propiedad.titulo}
+                            {cita.propiedad.colonia && <span className="text-gray-500"> · {cita.propiedad.colonia}</span>}
+                          </>
+                        ) : (
+                          <span className="text-gray-400 italic">Sin propiedad</span>
+                        )}
+                      </dd>
+                      <dt className="text-gray-500">Asesor</dt>
+                      <dd className="text-gray-900">{cita.asesor?.nombre || '-'}</dd>
+                    </dl>
+                    {['PENDIENTE', 'CONFIRMADA'].includes(cita.estado) && (
+                      <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                        {cita.estado === 'PENDIENTE' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCambiarEstado(cita.id, 'CONFIRMADA')}
+                            className="flex-1 min-h-[44px] rounded-lg bg-green-50 px-3 text-sm font-medium text-green-800 hover:bg-green-100"
+                          >
+                            Confirmar
+                          </button>
+                        )}
+                        {cita.estado === 'CONFIRMADA' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCambiarEstado(cita.id, 'COMPLETADA')}
+                            className="flex-1 min-h-[44px] rounded-lg bg-primary-50 px-3 text-sm font-medium text-primary-700 hover:bg-primary-100"
+                          >
+                            Completar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCambiarEstado(cita.id, 'CANCELADA')}
+                          className="flex-1 min-h-[44px] rounded-lg bg-red-50 px-3 text-sm font-medium text-red-700 hover:bg-red-100"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Escritorio: tabla */}
+              <div className="hidden lg:block overflow-x-auto shadow ring-1 ring-black/5 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
@@ -235,10 +298,9 @@ export default function CitasPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-lg p-6">

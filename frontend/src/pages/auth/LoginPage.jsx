@@ -81,16 +81,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 font-medium text-white transition-colors bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[44px] px-4 py-2 font-medium text-white transition-colors bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
         </form>
 
-        <div className="mt-6 text-sm text-center text-gray-600">
-          <p className="mb-2">Credenciales de demostración:</p>
-          <p className="font-mono text-xs">admin@casashidalgo.com.mx / Demo2024!</p>
-        </div>
       </div>
     </div>
   );

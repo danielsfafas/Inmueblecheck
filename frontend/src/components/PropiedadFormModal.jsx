@@ -102,16 +102,17 @@ export default function PropiedadFormModal({ isOpen, onClose, onSuccess, propied
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-4xl w-full max-h-[94dvh] sm:max-h-[90vh] flex flex-col">
+        <div className="shrink-0 bg-white border-b px-4 sm:px-6 py-2 sm:py-3 flex items-center justify-between rounded-t-2xl sm:rounded-t-lg">
           <h2 className="text-xl font-semibold">{propiedadId ? 'Editar' : 'Nueva'} Propiedad</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button type="button" onClick={onClose} className="tap-target -mr-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Cerrar">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto pb-24">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 sm:px-6 sm:pt-6 space-y-6">
           {/* Básicos */}
           <div>
             <h3 className="font-medium mb-3">Información Básica</h3>
@@ -297,12 +298,12 @@ export default function PropiedadFormModal({ isOpen, onClose, onSuccess, propied
                 { key: 'aceptaInfonavit', label: 'Infonavit' },
                 { key: 'aceptaFovissste', label: 'Fovissste' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center">
+                <label key={key} className="flex items-center min-h-[44px] sm:min-h-0 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData[key]}
                     onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                    className="mr-2"
+                    className="checkbox-field mr-2"
                   />
                   {label}
                 </label>
@@ -310,18 +311,18 @@ export default function PropiedadFormModal({ isOpen, onClose, onSuccess, propied
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t sticky bottom-0 bg-white">
+          <div className="flex gap-3 py-3 sm:py-4 pb-safe sm:pb-4 border-t sticky bottom-0 -mx-4 px-4 sm:-mx-6 sm:px-6 bg-white">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              className="flex-1 min-h-[44px] px-4 py-2 border rounded-lg hover:bg-gray-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
               {loading ? 'Guardando...' : 'Guardar'}

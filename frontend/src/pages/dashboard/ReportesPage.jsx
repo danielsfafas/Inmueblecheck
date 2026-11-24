@@ -45,7 +45,7 @@ export default function ReportesPage() {
       <h1 className="mb-6 text-3xl font-bold text-gray-900">Reportes</h1>
 
       {/* Reporte general */}
-      <div className="p-6 mb-6 bg-white rounded-lg shadow">
+      <div className="p-4 sm:p-6 mb-6 bg-white rounded-lg shadow">
         <div className="flex items-center mb-4">
           <BarChart3 className="w-6 h-6 mr-2 text-primary-600" />
           <h2 className="text-xl font-semibold text-gray-900">Resumen General</h2>
@@ -89,7 +89,7 @@ export default function ReportesPage() {
 
       {/* Tiempo de respuesta */}
       {tiempoRespuesta && (
-        <div className="p-6 mb-6 bg-white rounded-lg shadow">
+        <div className="p-4 sm:p-6 mb-6 bg-white rounded-lg shadow">
           <div className="flex items-center mb-4">
             <Clock className="w-6 h-6 mr-2 text-orange-600" />
             <h2 className="text-xl font-semibold text-gray-900">Tiempo de Respuesta</h2>
@@ -105,13 +105,37 @@ export default function ReportesPage() {
       )}
 
       {/* Reporte por ejecutivo */}
-      <div className="p-6 bg-white rounded-lg shadow">
+      <div className="p-4 sm:p-6 bg-white rounded-lg shadow">
         <div className="flex items-center mb-4">
           <Users className="w-6 h-6 mr-2 text-blue-600" />
           <h2 className="text-xl font-semibold text-gray-900">Desempeño por Ejecutivo</h2>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Móvil: una tarjeta por ejecutivo con sus métricas en rejilla */}
+        <ul className="md:hidden space-y-3">
+          {reporteEjecutivos.map((reporte, index) => (
+            <li key={index} className="rounded-lg border border-gray-200 p-3">
+              <p className="font-medium text-gray-900">{reporte.ejecutivo}</p>
+              <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+                {[
+                  ['Asignados', reporte.prospectosAsignados],
+                  ['Nuevos', reporte.prospectosNuevos],
+                  ['En Visita', reporte.prospectosEnVisita],
+                  ['Cerrados', reporte.prospectosCerrados, 'text-green-700 font-semibold'],
+                  ['Llamadas', reporte.llamadasRealizadas],
+                  ['Visitas', reporte.visitasAgendadas],
+                ].map(([label, valor, cls]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-gray-500">{label}</dt>
+                    <dd className={`tabular-nums ${cls || 'text-gray-900'}`}>{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">

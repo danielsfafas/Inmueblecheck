@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { format } from 'date-fns';
+import { ChevronLeft, Info, X } from 'lucide-react';
 import { es } from 'date-fns/locale';
 
 export default function ConversacionDetallePage() {
@@ -15,6 +16,7 @@ export default function ConversacionDetallePage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [infoAbierta, setInfoAbierta] = useState(false);
 
   useEffect(() => {
     cargarConversacion();
@@ -115,7 +117,7 @@ export default function ConversacionDetallePage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -128,55 +130,122 @@ export default function ConversacionDetallePage() {
     );
   }
 
+  const statusBadge = (
+    <>
+      {conversacion.status === 'bot_activo' && (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+          Bot Activo
+        </span>
+      )}
+      {conversacion.status === 'pausado' && (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
+          Bot Pausado
+        </span>
+      )}
+      {conversacion.status === 'pasado_humano' && (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+          Con Asesor
+        </span>
+      )}
+    </>
+  );
+
+  const panelInfo = (
+    <>
+      <dl className="space-y-4">
+        <div>
+          <dt className="text-sm font-medium text-gray-500">Nombre</dt>
+          <dd className="mt-1 text-sm text-gray-900 break-words">{conversacion.prospecto.nombre}</dd>
+        </div>
+        <div>
+          <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+          <dd className="mt-1 text-sm text-gray-900 tabular-nums">{conversacion.prospecto.telefono}</dd>
+        </div>
+        {conversacion.prospecto.email && (
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Email</dt>
+            <dd className="mt-1 text-sm text-gray-900 break-all">{conversacion.prospecto.email}</dd>
+          </div>
+        )}
+        {conversacion.prospecto.ejecutivo && (
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Asesor Asignado</dt>
+            <dd className="mt-1 text-sm text-gray-900">
+              {conversacion.prospecto.ejecutivo.nombre}
+            </dd>
+          </div>
+        )}
+      </dl>
+
+      <div className="mt-6 space-y-2">
+        <Link
+          to={`/admin/prospectos/${conversacion.prospectoId}`}
+          className="flex w-full min-h-[44px] items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+        >
+          Ver Prospecto Completo
+        </Link>
+
+        {conversacion.status === 'bot_activo' ? (
+          <button
+            type="button"
+            onClick={handlePausarBot}
+            className="flex w-full min-h-[44px] items-center justify-center px-4 py-2 border border-yellow-300 rounded-lg shadow-sm text-sm font-medium text-yellow-800 bg-yellow-50 hover:bg-yellow-100"
+          >
+            Pausar Bot
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleReactivarBot}
+            className="flex w-full min-h-[44px] items-center justify-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-800 bg-green-50 hover:bg-green-100"
+          >
+            Reactivar Bot
+          </button>
+        )}
+      </div>
+    </>
+  );
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-white border-b border-gray-200 px-4 py-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    // Alto fijo al viewport: el historial hace scroll propio y la caja de respuesta queda siempre visible.
+    <div className="-mx-4 -my-6 h-[calc(100dvh-4rem)] sm:mx-0 sm:my-0 sm:h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-3rem)] flex flex-col overflow-hidden bg-white sm:rounded-lg sm:border sm:border-gray-200 sm:shadow-sm">
+      <div className="bg-white border-b border-gray-200 px-2 py-2 sm:px-4 sm:py-3 shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 sm:gap-3 min-w-0">
             <button
+              type="button"
               onClick={() => navigate('/admin/conversaciones')}
-              className="text-gray-400 hover:text-gray-600"
+              className="tap-target text-gray-500 hover:text-gray-700 hover:bg-gray-100 shrink-0"
+              aria-label="Volver a conversaciones"
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <ChevronLeft className="h-6 w-6" />
             </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate">
                 {conversacion.prospecto.nombre}
               </h1>
-              <p className="text-sm text-gray-500">{conversacion.prospecto.telefono}</p>
+              <p className="text-sm text-gray-500 tabular-nums truncate">{conversacion.prospecto.telefono}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {conversacion.status === 'bot_activo' && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                Bot Activo
-              </span>
-            )}
-            {conversacion.status === 'pausado' && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                Bot Pausado
-              </span>
-            )}
-            {conversacion.status === 'pasado_humano' && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                Con Asesor
-              </span>
-            )}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {statusBadge}
+            <button
+              type="button"
+              onClick={() => setInfoAbierta(true)}
+              className="lg:hidden tap-target text-gray-600 hover:bg-gray-100"
+              aria-label="Ver datos del prospecto y control del bot"
+              aria-expanded={infoAbierta}
+            >
+              <Info className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="relative flex flex-1 min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-3 bg-gray-50">
             {conversacion.mensajes.map((msg, idx) => {
               const esBot = msg.remitente === 'bot';
               const esAsesor = msg.remitente === 'asesor';
@@ -188,12 +257,12 @@ export default function ConversacionDetallePage() {
                   className={`flex ${esBot || esAsesor ? 'justify-start' : 'justify-end'}`}
                 >
                   <div
-                    className={`max-w-md px-4 py-2 rounded-lg ${
+                    className={`max-w-[85%] sm:max-w-md px-3.5 py-2 rounded-2xl ${
                       esBot
-                        ? 'bg-white border border-gray-200 text-gray-800'
+                        ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-md'
                         : esAsesor
-                        ? 'bg-indigo-100 text-gray-900'
-                        : 'bg-indigo-600 text-white'
+                        ? 'bg-primary-100 text-gray-900 rounded-tl-md'
+                        : 'bg-primary-600 text-white rounded-tr-md'
                     }`}
                   >
                     {esBot && (
@@ -206,10 +275,10 @@ export default function ConversacionDetallePage() {
                         👤 Asesor
                       </div>
                     )}
-                    <div className="whitespace-pre-wrap break-words">{msg.contenido}</div>
+                    <div className="whitespace-pre-wrap break-words text-[15px] sm:text-sm leading-relaxed">{msg.contenido}</div>
                     <div
                       className={`text-xs mt-1 ${
-                        esCliente ? 'text-indigo-100' : 'text-gray-500'
+                        esCliente ? 'text-primary-100' : 'text-gray-500'
                       }`}
                     >
                       {format(new Date(msg.createdAt), "d MMM 'a las' HH:mm", { locale: es })}
@@ -221,20 +290,22 @@ export default function ConversacionDetallePage() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="bg-white border-t border-gray-200 p-4">
+          <div className="bg-white border-t border-gray-200 px-3 pt-3 pb-safe sm:p-4 shrink-0">
             <form onSubmit={handleEnviarMensaje} className="flex gap-2">
               <input
                 type="text"
                 value={mensaje}
                 onChange={(e) => setMensaje(e.target.value)}
                 placeholder="Escribe un mensaje como asesor..."
-                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                aria-label="Mensaje como asesor"
+                enterKeyHint="send"
+                className="input-field flex-1 min-w-0"
                 disabled={sending}
               />
               <button
                 type="submit"
                 disabled={!mensaje.trim() || sending}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex shrink-0 items-center min-h-[44px] px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sending ? 'Enviando...' : 'Enviar'}
               </button>
@@ -242,59 +313,37 @@ export default function ConversacionDetallePage() {
           </div>
         </div>
 
-        <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+        {/* Escritorio: panel lateral fijo */}
+        <aside className="hidden lg:block w-80 shrink-0 bg-white border-l border-gray-200 p-6 overflow-y-auto">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Información del Prospecto</h2>
+          {panelInfo}
+        </aside>
 
-          <dl className="space-y-4">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-              <dd className="mt-1 text-sm text-gray-900">{conversacion.prospecto.nombre}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-              <dd className="mt-1 text-sm text-gray-900">{conversacion.prospecto.telefono}</dd>
-            </div>
-            {conversacion.prospecto.email && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900">{conversacion.prospecto.email}</dd>
+        {/* Móvil/tablet: el mismo panel como hoja sobre el chat */}
+        {infoAbierta && (
+          <div className="lg:hidden absolute inset-0 z-20 flex">
+            <button
+              type="button"
+              className="flex-1 bg-gray-900/40"
+              aria-label="Cerrar datos del prospecto"
+              onClick={() => setInfoAbierta(false)}
+            />
+            <aside className="w-full max-w-sm bg-white border-l border-gray-200 p-5 overflow-y-auto shadow-xl">
+              <div className="flex items-center justify-between mb-4 -mt-1">
+                <h2 className="text-lg font-medium text-gray-900">Información del Prospecto</h2>
+                <button
+                  type="button"
+                  onClick={() => setInfoAbierta(false)}
+                  className="tap-target -mr-3 text-gray-500 hover:bg-gray-100"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            )}
-            {conversacion.prospecto.ejecutivo && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Asesor Asignado</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {conversacion.prospecto.ejecutivo.nombre}
-                </dd>
-              </div>
-            )}
-          </dl>
-
-          <div className="mt-6 space-y-2">
-            <Link
-              to={`/admin/prospectos/${conversacion.prospectoId}`}
-              className="block w-full text-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Ver Prospecto Completo
-            </Link>
-
-            {conversacion.status === 'bot_activo' ? (
-              <button
-                onClick={handlePausarBot}
-                className="block w-full text-center px-4 py-2 border border-yellow-300 rounded-md shadow-sm text-sm font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100"
-              >
-                Pausar Bot
-              </button>
-            ) : (
-              <button
-                onClick={handleReactivarBot}
-                className="block w-full text-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100"
-              >
-                Reactivar Bot
-              </button>
-            )}
+              {panelInfo}
+            </aside>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

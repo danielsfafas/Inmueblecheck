@@ -88,10 +88,10 @@ export default function BotSimuladorPage() {
   ];
 
   return (
-    <div className="p-6">
+    <div>
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 basis-64">
             <h1 className="text-2xl font-bold text-gray-900">Simulador de Bot de WhatsApp</h1>
             <p className="mt-2 text-gray-600">
               Prueba las respuestas del bot antes de que interactúe con prospectos reales
@@ -99,7 +99,7 @@ export default function BotSimuladorPage() {
           </div>
           <button
             onClick={nuevaConversacion}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Nueva conversación
@@ -125,7 +125,7 @@ export default function BotSimuladorPage() {
             </div>
 
             {/* Mensajes */}
-            <div className="h-[500px] overflow-y-auto p-4 space-y-4 bg-green-50">
+            <div className="h-[60dvh] sm:h-[500px] overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-4 bg-green-50">
               {mensajes.map((mensaje) => (
                 <div
                   key={mensaje.id}
@@ -188,13 +188,15 @@ export default function BotSimuladorPage() {
                   value={inputMensaje}
                   onChange={(e) => setInputMensaje(e.target.value)}
                   placeholder="Escribe un mensaje..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 min-w-0 min-h-[44px] px-4 py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Mensaje de prueba"
                   disabled={cargando}
                 />
                 <button
                   type="submit"
                   disabled={cargando || !inputMensaje.trim()}
-                  className="px-4 py-2 font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-h-[44px] min-w-[44px] px-4 py-2 font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Enviar mensaje"
                 >
                   <Send className="w-5 h-5" />
                 </button>

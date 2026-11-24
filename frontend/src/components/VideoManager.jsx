@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Youtube, Upload, Trash2, MoveUp, MoveDown, AlertCircle } from 'lucide-react';
+import { Youtube, Upload, Trash2, MoveUp, MoveDown, AlertCircle, X } from 'lucide-react';
 import api from '../services/api';
 import { mediaUrl } from '../utils/mediaUrl';
 import toast from 'react-hot-toast';
@@ -154,16 +154,18 @@ export default function VideoManager({ propiedadId, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="w-full max-w-4xl overflow-hidden bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black bg-opacity-50">
+      <div className="w-full max-w-4xl overflow-hidden bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-h-[94dvh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-900">Gestionar Videos</h2>
+        <div className="flex items-center justify-between px-4 py-2 sm:px-6 sm:py-4 border-b">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestionar Videos</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="tap-target -mr-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Cerrar"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 

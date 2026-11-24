@@ -332,17 +332,17 @@ export default function MiWhatsAppPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Mi WhatsApp</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mi WhatsApp</h1>
       </div>
 
       {/* Mis Números WhatsApp */}
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-gray-900">Mis Números WhatsApp</h2>
             <button
               onClick={() => setModalNuevoOpen(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center w-full sm:w-auto min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
               Conectar Nuevo Número
@@ -357,7 +357,7 @@ export default function MiWhatsAppPage() {
               <p className="text-gray-500 mb-4">No tienes números conectados</p>
               <button
                 onClick={() => setModalNuevoOpen(true)}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="min-h-[44px] px-3 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium"
               >
                 Conectar tu primer número
               </button>
@@ -635,9 +635,9 @@ export default function MiWhatsAppPage() {
       {/* Modal QR */}
       {modalQROpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 max-h-[94dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Escanea el QR con tu WhatsApp</h3>
+              <h3 className="text-lg font-semibold pr-2">Escanea el QR con tu WhatsApp</h3>
               <button
                 onClick={() => {
                   setModalQROpen(false);
@@ -646,7 +646,8 @@ export default function MiWhatsAppPage() {
                     window.__qrCleanup = null;
                   }
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="tap-target -mr-3 shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -704,11 +705,12 @@ function NuevoNumeroModal({ onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6 border-b">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[94dvh] overflow-y-auto">
+        <div className="px-4 py-2 sm:px-6 sm:py-4 border-b">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Conectar Nuevo Número</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button type="button" onClick={onClose} className="tap-target -mr-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Cerrar">
               <X className="w-5 h-5" />
             </button>
           </div>

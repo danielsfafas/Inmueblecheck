@@ -16,7 +16,7 @@ export default function PrivacidadPage() {
       </header>
 
       <div className="px-4 py-8 mx-auto max-w-4xl sm:px-6 lg:px-8">
-        <Link to="/" className="inline-flex items-center mb-6 text-gray-700 hover:text-primary-600">
+        <Link to="/" className="inline-flex items-center min-h-[44px] mb-4 text-gray-700 hover:text-primary-600">
           <ArrowLeft className="w-5 h-5 mr-2" />
           Volver al inicio
         </Link>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { Save } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 export default function ConfiguracionPage() {
   const [config, setConfig] = useState(null);
   const [usuarios, setUsuarios] = useState([]);
+  const telefonoInputRef = useRef(null);
+  const telefonoMovilRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
@@ -232,13 +234,77 @@ export default function ConfiguracionPage() {
       </form>
 
       <div className="max-w-4xl mt-8">
-        <div className="p-6 bg-white rounded-lg shadow">
+        <div className="p-4 sm:p-6 bg-white rounded-lg shadow">
           <h2 className="mb-4 text-xl font-semibold text-gray-900">Usuarios</h2>
           <p className="mb-4 text-sm text-gray-600">
             Configura el teléfono WhatsApp para recibir notificaciones de escalamiento
           </p>
 
-          <div className="overflow-hidden border border-gray-200 rounded-lg">
+          {/* Móvil: tarjetas con edición en línea y botón Guardar visible */}
+          <ul className="lg:hidden divide-y divide-gray-200 border border-gray-200 rounded-lg">
+            {usuarios.map((usuario) => (
+              <li key={usuario.id} className="p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{usuario.nombre}</p>
+                    <p className="text-sm text-gray-500 break-all">{usuario.email}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{usuario.rol}</p>
+                  </div>
+                  {editandoUsuario !== usuario.id && (
+                    <button
+                      type="button"
+                      onClick={() => setEditandoUsuario(usuario.id)}
+                      className="shrink-0 -mr-1 min-h-[44px] px-3 rounded-lg text-sm font-medium text-primary-600 hover:bg-primary-50"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+                {editandoUsuario === usuario.id ? (
+                  <form
+                    className="mt-2 space-y-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      actualizarTelefonoUsuario(usuario.id, telefonoMovilRef.current?.value || '');
+                    }}
+                  >
+                    <label className="block text-xs font-medium text-gray-600" htmlFor={`tel-${usuario.id}`}>
+                      WhatsApp
+                    </label>
+                    <input
+                      id={`tel-${usuario.id}`}
+                      ref={telefonoMovilRef}
+                      type="tel"
+                      inputMode="tel"
+                      defaultValue={usuario.telefonoWhatsapp || ''}
+                      placeholder="+5215512345678"
+                      className="input-field"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button type="submit" className="flex-1 min-h-[44px] rounded-lg bg-primary-600 px-3 text-sm font-medium text-white hover:bg-primary-700">
+                        Guardar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoUsuario(null)}
+                        className="flex-1 min-h-[44px] rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-700">
+                    <span className="text-gray-500">WhatsApp: </span>
+                    <span className="tabular-nums">{usuario.telefonoWhatsapp || '-'}</span>
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden lg:block overflow-hidden border border-gray-200 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -267,6 +333,8 @@ export default function ConfiguracionPage() {
                           type="tel"
                           defaultValue={usuario.telefonoWhatsapp || ''}
                           placeholder="+5215512345678"
+                          ref={telefonoInputRef}
+                          aria-label={`WhatsApp de ${usuario.nombre}`}
                           className="px-2 py-1 border border-gray-300 rounded"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -283,16 +351,27 @@ export default function ConfiguracionPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {editandoUsuario === usuario.id ? (
-                        <button
-                          onClick={() => setEditandoUsuario(null)}
-                          className="text-gray-600 hover:text-gray-900"
-                        >
-                          Cancelar
-                        </button>
+                        <span className="inline-flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => actualizarTelefonoUsuario(usuario.id, telefonoInputRef.current?.value || '')}
+                            className="text-primary-600 hover:text-primary-800"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditandoUsuario(null)}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            Cancelar
+                          </button>
+                        </span>
                       ) : (
                         <button
                           onClick={() => setEditandoUsuario(usuario.id)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          type="button"
+                          className="text-primary-600 hover:text-primary-800"
                         >
                           Editar
                         </button>

@@ -90,14 +90,15 @@ export default function ProspectoNuevoModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-3xl w-full max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white border-b px-4 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Nuevo Prospecto</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="tap-target -mr-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Cerrar"
           >
             <X className="w-5 h-5" />
           </button>
@@ -273,7 +274,7 @@ export default function ProspectoNuevoModal({ isOpen, onClose, onSuccess }) {
                 {propiedades.map((prop) => (
                   <label
                     key={prop.id}
-                    className="flex items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
+                    className="flex items-center min-h-[44px] py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -291,11 +292,11 @@ export default function ProspectoNuevoModal({ isOpen, onClose, onSuccess }) {
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t">
+          <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 pb-safe sm:pb-0 bg-white flex items-center justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="min-h-[44px] px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={loading}
             >
               Cancelar
@@ -303,7 +304,7 @@ export default function ProspectoNuevoModal({ isOpen, onClose, onSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none min-h-[44px] px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creando...' : 'Crear Prospecto'}
             </button>

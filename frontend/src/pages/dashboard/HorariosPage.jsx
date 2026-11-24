@@ -118,13 +118,13 @@ export default function HorariosPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
+    <div>
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Horarios y Cierres</h1>
@@ -135,25 +135,26 @@ export default function HorariosPage() {
       </div>
 
       <div className="mt-6 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex gap-5 sm:gap-8 overflow-x-auto scrollbar-hide" aria-label="Secciones de horarios">
           <button
             onClick={() => setTab('horarios')}
             className={`${
               tab === 'horarios'
-                ? 'border-indigo-500 text-indigo-600'
+                ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
+            } whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 min-h-[44px] text-sm font-medium flex items-center gap-2 shrink-0`}
           >
             <Clock className="h-5 w-5" />
-            Horarios Semanales
+            <span className="sm:hidden">Semana</span>
+            <span className="hidden sm:inline">Horarios Semanales</span>
           </button>
           <button
             onClick={() => setTab('cierres')}
             className={`${
               tab === 'cierres'
-                ? 'border-indigo-500 text-indigo-600'
+                ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
+            } whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 min-h-[44px] text-sm font-medium flex items-center gap-2 shrink-0`}
           >
             <Calendar className="h-5 w-5" />
             Cierres
@@ -162,9 +163,9 @@ export default function HorariosPage() {
             onClick={() => setTab('config')}
             className={`${
               tab === 'config'
-                ? 'border-indigo-500 text-indigo-600'
+                ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
+            } whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 min-h-[44px] text-sm font-medium flex items-center gap-2 shrink-0`}
           >
             <Settings className="h-5 w-5" />
             Configuración
@@ -173,7 +174,7 @@ export default function HorariosPage() {
       </div>
 
       {tab === 'horarios' && (
-        <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="mt-6 bg-white shadow overflow-hidden rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="space-y-4">
               {diasSemana.map((dia) => {
@@ -187,53 +188,63 @@ export default function HorariosPage() {
                 };
 
                 return (
-                  <div key={dia.value} className="border-b pb-4 last:border-b-0">
-                    <div className="flex items-center gap-4">
-                      <div className="w-32 font-medium text-gray-900">{dia.label}</div>
-                      
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={horario.activo}
-                          onChange={(e) => handleActualizarHorario(dia.value, 'activo', e.target.checked)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="text-sm text-gray-700">Activo</span>
-                      </label>
+                  <div key={dia.value} className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                      <div className="flex items-center justify-between md:justify-start md:gap-4">
+                        <div className="md:w-28 font-medium text-gray-900">{dia.label}</div>
+                        <label className="flex items-center gap-2 min-h-[44px] md:min-h-0 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={horario.activo}
+                            onChange={(e) => handleActualizarHorario(dia.value, 'activo', e.target.checked)}
+                            className="checkbox-field"
+                          />
+                          <span className="text-sm text-gray-700">Activo</span>
+                        </label>
+                      </div>
 
                       {horario.activo && (
-                        <>
-                          <input
-                            type="time"
-                            value={horario.horaInicio}
-                            onChange={(e) => handleActualizarHorario(dia.value, 'horaInicio', e.target.value)}
-                            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                          <span className="text-gray-500">a</span>
-                          <input
-                            type="time"
-                            value={horario.horaFin}
-                            onChange={(e) => handleActualizarHorario(dia.value, 'horaFin', e.target.value)}
-                            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:flex md:flex-wrap md:items-center md:gap-4">
+                          <fieldset className="flex items-center gap-2">
+                            <legend className="sr-only">Horario de {dia.label}</legend>
+                            <span className="w-12 md:w-auto text-sm text-gray-500 md:sr-only">Horario</span>
+                            <input
+                              type="time"
+                              value={horario.horaInicio}
+                              onChange={(e) => handleActualizarHorario(dia.value, 'horaInicio', e.target.value)}
+                              aria-label={`${dia.label}: hora de inicio`}
+                              className="input-field min-w-0 flex-1 md:w-32 md:flex-none"
+                            />
+                            <span className="text-gray-500">a</span>
+                            <input
+                              type="time"
+                              value={horario.horaFin}
+                              onChange={(e) => handleActualizarHorario(dia.value, 'horaFin', e.target.value)}
+                              aria-label={`${dia.label}: hora de fin`}
+                              className="input-field min-w-0 flex-1 md:w-32 md:flex-none"
+                            />
+                          </fieldset>
 
-                          <span className="text-gray-500 ml-4">Pausa:</span>
-                          <input
-                            type="time"
-                            value={horario.pausaInicio || ''}
-                            onChange={(e) => handleActualizarHorario(dia.value, 'pausaInicio', e.target.value)}
-                            placeholder="Inicio"
-                            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                          <span className="text-gray-500">a</span>
-                          <input
-                            type="time"
-                            value={horario.pausaFin || ''}
-                            onChange={(e) => handleActualizarHorario(dia.value, 'pausaFin', e.target.value)}
-                            placeholder="Fin"
-                            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                        </>
+                          <fieldset className="flex items-center gap-2">
+                            <legend className="sr-only">Pausa de {dia.label}</legend>
+                            <span className="w-12 md:w-auto text-sm text-gray-500">Pausa</span>
+                            <input
+                              type="time"
+                              value={horario.pausaInicio || ''}
+                              onChange={(e) => handleActualizarHorario(dia.value, 'pausaInicio', e.target.value)}
+                              aria-label={`${dia.label}: inicio de pausa`}
+                              className="input-field min-w-0 flex-1 md:w-32 md:flex-none"
+                            />
+                            <span className="text-gray-500">a</span>
+                            <input
+                              type="time"
+                              value={horario.pausaFin || ''}
+                              onChange={(e) => handleActualizarHorario(dia.value, 'pausaFin', e.target.value)}
+                              aria-label={`${dia.label}: fin de pausa`}
+                              className="input-field min-w-0 flex-1 md:w-32 md:flex-none"
+                            />
+                          </fieldset>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -245,8 +256,8 @@ export default function HorariosPage() {
       )}
 
       {tab === 'cierres' && (
-        <div className="mt-8 space-y-6">
-          <div className="bg-white shadow sm:rounded-lg p-6">
+        <div className="mt-6 space-y-6">
+          <div className="bg-white shadow rounded-lg p-4 sm:p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Agregar Cierre</h3>
             <form onSubmit={handleCrearCierre} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -256,7 +267,7 @@ export default function HorariosPage() {
                     type="date"
                     value={nuevoCierre.fecha}
                     onChange={(e) => setNuevoCierre({ ...nuevoCierre, fecha: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="input-field mt-1"
                     required
                   />
                 </div>
@@ -268,18 +279,18 @@ export default function HorariosPage() {
                     value={nuevoCierre.motivo}
                     onChange={(e) => setNuevoCierre({ ...nuevoCierre, motivo: e.target.value })}
                     placeholder="Día festivo, evento especial..."
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="input-field mt-1"
                     required
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={nuevoCierre.diaCompleto}
                       onChange={(e) => setNuevoCierre({ ...nuevoCierre, diaCompleto: e.target.checked })}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      className="checkbox-field"
                     />
                     <span className="text-sm font-medium text-gray-700">Día completo</span>
                   </label>
@@ -293,7 +304,7 @@ export default function HorariosPage() {
                         type="time"
                         value={nuevoCierre.horaInicio}
                         onChange={(e) => setNuevoCierre({ ...nuevoCierre, horaInicio: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="input-field mt-1"
                       />
                     </div>
                     <div>
@@ -302,7 +313,7 @@ export default function HorariosPage() {
                         type="time"
                         value={nuevoCierre.horaFin}
                         onChange={(e) => setNuevoCierre({ ...nuevoCierre, horaFin: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="input-field mt-1"
                       />
                     </div>
                   </>
@@ -311,7 +322,7 @@ export default function HorariosPage() {
 
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center justify-center w-full sm:w-auto min-h-[44px] px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar Cierre
@@ -319,7 +330,7 @@ export default function HorariosPage() {
             </form>
           </div>
 
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="bg-white shadow overflow-hidden rounded-lg">
             <ul className="divide-y divide-gray-200">
               {cierres.length === 0 ? (
                 <li className="px-6 py-8 text-center text-gray-500">
@@ -327,11 +338,11 @@ export default function HorariosPage() {
                 </li>
               ) : (
                 cierres.map((cierre) => (
-                  <li key={cierre.id} className="px-6 py-4">
+                  <li key={cierre.id} className="px-4 py-3 sm:px-6 sm:py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium text-gray-900">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="font-medium text-gray-900 first-letter:uppercase">
                             {format(parseISO(cierre.fecha), "EEEE d 'de' MMMM, yyyy", { locale: es })}
                           </span>
                           {!cierre.diaCompleto && (
@@ -343,8 +354,10 @@ export default function HorariosPage() {
                         <p className="mt-1 text-sm text-gray-600">{cierre.motivo}</p>
                       </div>
                       <button
+                        type="button"
                         onClick={() => handleEliminarCierre(cierre.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="tap-target -mr-2 text-red-600 hover:text-red-800 hover:bg-red-50"
+                        aria-label="Eliminar cierre"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -358,7 +371,7 @@ export default function HorariosPage() {
       )}
 
       {tab === 'config' && configuracion && (
-        <div className="mt-8 bg-white shadow sm:rounded-lg p-6">
+        <div className="mt-6 bg-white shadow rounded-lg p-4 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración General</h3>
           <div className="space-y-4">
             <div>
@@ -369,7 +382,7 @@ export default function HorariosPage() {
                 type="number"
                 value={configuracion.duracionCitaMin}
                 onChange={(e) => handleActualizarConfiguracion('duracionCitaMin', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-field mt-1"
               />
             </div>
 
@@ -381,7 +394,7 @@ export default function HorariosPage() {
                 type="number"
                 value={configuracion.tiempoAntelacionMin}
                 onChange={(e) => handleActualizarConfiguracion('tiempoAntelacionMin', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-field mt-1"
               />
               <p className="mt-1 text-sm text-gray-500">
                 Tiempo mínimo requerido entre ahora y la cita
@@ -396,7 +409,7 @@ export default function HorariosPage() {
                 type="number"
                 value={configuracion.diasConCitasAdelante}
                 onChange={(e) => handleActualizarConfiguracion('diasConCitasAdelante', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-field mt-1"
               />
               <p className="mt-1 text-sm text-gray-500">
                 Ventana de días disponibles para agendar citas
@@ -411,7 +424,7 @@ export default function HorariosPage() {
                 type="number"
                 value={configuracion.horasAutoresumeBotPausa}
                 onChange={(e) => handleActualizarConfiguracion('horasAutoresumeBotPausa', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-field mt-1"
               />
             </div>
           </div>
