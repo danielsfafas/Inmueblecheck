@@ -590,6 +590,87 @@ async function main() {
 
   console.log('✅ Consentimientos de ejemplo creados');
 
+  // ===== HORARIOS DE CITAS =====
+  console.log('\n📅 Creando horarios de citas...');
+
+  const diasSemana = [
+    { dia: 1, nombre: 'Lunes', activo: true, inicio: '09:00', fin: '18:00', pausa: ['14:00', '15:00'] },
+    { dia: 2, nombre: 'Martes', activo: true, inicio: '09:00', fin: '18:00', pausa: ['14:00', '15:00'] },
+    { dia: 3, nombre: 'Miércoles', activo: true, inicio: '09:00', fin: '18:00', pausa: ['14:00', '15:00'] },
+    { dia: 4, nombre: 'Jueves', activo: true, inicio: '09:00', fin: '18:00', pausa: ['14:00', '15:00'] },
+    { dia: 5, nombre: 'Viernes', activo: true, inicio: '09:00', fin: '18:00', pausa: ['14:00', '15:00'] },
+    { dia: 6, nombre: 'Sábado', activo: true, inicio: '09:00', fin: '14:00', pausa: null },
+    { dia: 7, nombre: 'Domingo', activo: false, inicio: '09:00', fin: '14:00', pausa: null },
+  ];
+
+  for (const horario of diasSemana) {
+    await prisma.horarioCitas.create({
+      data: {
+        inmobiliariaId: inmobiliaria.id,
+        diaSemana: horario.dia,
+        activo: horario.activo,
+        horaInicio: horario.inicio,
+        horaFin: horario.fin,
+        pausaInicio: horario.pausa?.[0] || null,
+        pausaFin: horario.pausa?.[1] || null,
+      },
+    });
+  }
+
+  console.log('✅ Horarios de citas creados (Lun-Vie 9-18h con lunch 14-15h, Sáb 9-14h)');
+
+  // ===== CITAS DE EJEMPLO =====
+  console.log('\n📆 Creando citas de ejemplo...');
+
+  const fechaManana = new Date();
+  fechaManana.setDate(fechaManana.getDate() + 1);
+  fechaManana.setHours(0, 0, 0, 0);
+
+  const fechaPasadoManana = new Date();
+  fechaPasadoManana.setDate(fechaPasadoManana.getDate() + 2);
+  fechaPasadoManana.setHours(0, 0, 0, 0);
+
+  const citasPendientes = [
+    {
+      prospectoId: prospectos[0].id,
+      propiedadId: propiedades[0].id,
+      asesorId: usuarios[1].id,
+      fecha: fechaManana,
+      hora: '10:00',
+      estado: 'PENDIENTE',
+    },
+    {
+      prospectoId: prospectos[1].id,
+      propiedadId: propiedades[2].id,
+      asesorId: usuarios[2].id,
+      fecha: fechaManana,
+      hora: '16:00',
+      estado: 'CONFIRMADA',
+      confirmadaAt: new Date(),
+    },
+    {
+      prospectoId: prospectos[2].id,
+      propiedadId: null, // Sin propiedad específica
+      asesorId: usuarios[1].id,
+      fecha: fechaPasadoManana,
+      hora: '11:00',
+      estado: 'PENDIENTE',
+    },
+  ];
+
+  for (const citaData of citasPendientes) {
+    await prisma.cita.create({
+      data: {
+        inmobiliariaId: inmobiliaria.id,
+        ...citaData,
+        duracionMin: 60,
+        origen: 'ADMIN',
+      },
+    });
+  }
+
+  console.log('✅ 3 citas de ejemplo creadas (1 PENDIENTE, 1 CONFIRMADA, 1 sin propiedad)');
+
   console.log('\n🎉 Seed completado exitosamente!');
   console.log('\n📋 Resumen:');
   console.log(`   - 1 Inmobiliaria: ${inmobiliaria.nombre}`);
@@ -598,11 +679,13 @@ async function main() {
   console.log(`   - ${prospectos.length} Prospectos`);
   console.log(`   - ${actividades.length} Actividades (mensajes, llamadas, visitas, notas)`);
   console.log(`   - ${recordatorios.length} Recordatorios (1 vencido, 2 pendientes)`);
+  console.log(`   - 7 Horarios de citas (Lun-Vie 9-18h, Sáb 9-14h)`);
+  console.log(`   - 3 Citas de ejemplo (1 PENDIENTE, 1 CONFIRMADA, 1 sin propiedad)`);
   console.log('\n🔑 Credenciales de acceso:');
   console.log('   Admin: admin@casashidalgo.com.mx / Demo2024!');
   console.log('   Ejecutivo 1: maria.lopez@casashidalgo.com.mx / Demo2024!');
   console.log('   Ejecutivo 2: carlos.garcia@casashidalgo.com.mx / Demo2024!');
-  console.log('\n📌 Nota: El dashboard mostrará 1 recordatorio vencido para pruebas.');
+  console.log('\n📌 Nota: El dashboard mostrará 1 recordatorio vencido y 3 citas próximas para pruebas.');
 }
 
 main()

@@ -154,9 +154,10 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
            `¿Qué prefieres?`;
   }
 
-  // 11. AGENDAR VISITA
+  // 11. AGENDAR VISITA (inicia flujo booking)
   if (detectarIntent(mensaje, ['agendar', 'visita', 'ver la casa', 'ver el depa', 'conocer', 'visitar', 'cita'])) {
-    return `¡Perfecto! Para agendar una visita, escribe *AGENTE* y un asesor te contactará de inmediato para coordinar fecha y hora. 📅`;
+    // Será manejado por citasFlow.service.js
+    return '__INICIAR_FLUJO_BOOKING__';
   }
 
   // 12. FINANCIAMIENTO / CRÉDITO

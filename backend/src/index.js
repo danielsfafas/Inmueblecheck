@@ -30,6 +30,9 @@ import propiedadFotosRoutes from './routes/propiedad-fotos.routes.js';
 import miWhatsappRoutes from './routes/mi-whatsapp.routes.js';
 import conversacionesRoutes from './routes/conversaciones.routes.js';
 import notificacionesRoutes from './routes/notificaciones.routes.js';
+import citasRoutes from './routes/citas.routes.js';
+import horariosRoutes from './routes/horarios.routes.js';
+import { iniciarJobRecordatoriosCitas } from './jobs/citasReminders.js';
 
 // Middleware de error
 import { errorHandler } from './middleware/errorHandler.js';
@@ -128,6 +131,8 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/bot-simulator', botSimulatorRoutes);
 app.use('/api/conversaciones', conversacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/citas', citasRoutes);
+app.use('/api/horarios', horariosRoutes);
 
 // Middleware de errores
 app.use(errorHandler);
@@ -173,6 +178,9 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`📍 Zona horaria: ${process.env.TZ || 'America/Mexico_City'}`);
   console.log(`🏢 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔌 Socket.IO activo`);
+  
+  // Iniciar job de recordatorios de citas
+  iniciarJobRecordatoriosCitas();
 });
 
 // Manejo de señales

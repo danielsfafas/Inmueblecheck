@@ -8,6 +8,7 @@ import {
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 import { crearNotificacion, notificarAsesorPorWhatsApp } from './notificaciones.service.js';
+import { iniciarFlujoCita, procesarFlujoCita, gestionarCitaExistente } from './citasFlow.service.js';
 
 /**
  * Actualizar datos del prospecto cuando el bot aprende información
@@ -389,9 +390,50 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
       return;
     }
 
-    // Generar respuesta con IA
+    // Verificar si está en flujo activo (booking, etc.)
     const contexto = await obtenerContextoConversacion(conversacion.id, prospecto);
-    const respuestaIA = await generarRespuestaIA(mensaje, contexto);
+    
+    if (conversacion.flujoBot === 'booking') {
+      // Procesar flujo de booking
+      const respuestaFlujo = await procesarFlujoCita(conversacion, mensaje, contexto);
+      
+      await prisma.mensaje.create({
+        data: {
+          conversacionId: conversacion.id,
+          remitente: 'bot',
+          contenido: respuestaFlujo,
+          esBot: true,
+        },
+      });
+
+      console.log(`📤 DECISIÓN: Responder flujo booking a ${telefono}`);
+      await enviarMensajeWhatsApp(numeroReceptor, telefono, respuestaFlujo, remoteJid);
+      return;
+    }
+
+    // Generar respuesta con IA
+    let respuestaIA = await generarRespuestaIA(mensaje, contexto);
+
+    // Detectar si IA quiere iniciar flujo booking
+    if (respuestaIA === '__INICIAR_FLUJO_BOOKING__') {
+      respuestaIA = await iniciarFlujoCita(conversacion, contexto);
+    }
+
+    // Detectar intent de gestionar cita existente
+    if (mensajeNormalizado.includes('CITA') || mensajeNormalizado.includes('CANCELAR') || 
+        mensajeNormalizado.includes('REAGENDAR')) {
+      const tieneCitas = await prisma.cita.count({
+        where: {
+          prospectoId: prospecto.id,
+          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+          fecha: { gte: new Date() },
+        },
+      });
+      
+      if (tieneCitas > 0) {
+        respuestaIA = await gestionarCitaExistente(conversacion, mensaje, contexto);
+      }
+    }
 
     // Guardar respuesta del bot
     await prisma.mensaje.create({
