@@ -11,7 +11,9 @@ import {
   X,
   Bot,
   Smartphone,
-  MessageCircle
+  MessageCircle,
+  CalendarDays,
+  Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
@@ -22,6 +24,8 @@ const navigation = [
   { name: 'Prospectos', href: '/admin/prospectos', icon: Users },
   { name: 'Propiedades', href: '/admin/propiedades', icon: Building2 },
   { name: 'Conversaciones', href: '/admin/conversaciones', icon: MessageCircle },
+  { name: 'Citas', href: '/admin/citas', icon: CalendarDays },
+  { name: 'Horarios', href: '/admin/horarios', icon: Clock },
   { name: 'Recordatorios', href: '/admin/recordatorios', icon: Bell },
   { name: 'Mi WhatsApp', href: '/admin/mi-whatsapp', icon: Smartphone },
   { name: 'Reportes', href: '/admin/reportes', icon: BarChart3 },

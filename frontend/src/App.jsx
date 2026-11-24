@@ -23,6 +23,8 @@ import BotSimuladorPage from './pages/dashboard/BotSimuladorPage';
 import MiWhatsAppPage from './pages/dashboard/MiWhatsAppPage';
 import ConversacionesPage from './pages/dashboard/ConversacionesPage';
 import ConversacionDetallePage from './pages/dashboard/ConversacionDetallePage';
+import CitasPage from './pages/dashboard/CitasPage';
+import HorariosPage from './pages/dashboard/HorariosPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
@@ -61,6 +63,8 @@ function App() {
         <Route path="propiedades" element={<PropiedadesAdminPage />} />
         <Route path="conversaciones" element={<ConversacionesPage />} />
         <Route path="conversaciones/:id" element={<ConversacionDetallePage />} />
+        <Route path="citas" element={<CitasPage />} />
+        <Route path="horarios" element={<HorariosPage />} />
         <Route path="recordatorios" element={<RecordatoriosPage />} />
         <Route path="mi-whatsapp" element={<MiWhatsAppPage />} />
         <Route path="reportes" element={<ReportesPage />} />
