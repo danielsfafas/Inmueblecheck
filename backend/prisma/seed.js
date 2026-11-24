@@ -630,6 +630,8 @@ async function main() {
   fechaPasadoManana.setDate(fechaPasadoManana.getDate() + 2);
   fechaPasadoManana.setHours(0, 0, 0, 0);
 
+  const usuarios = [admin, ejecutivo1, ejecutivo2];
+
   const citasPendientes = [
     {
       prospectoId: prospectos[0].id,

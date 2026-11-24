@@ -186,6 +186,51 @@ async function calcularCapacidadSlot(inmobiliariaId, fecha, hora, duracionMin, p
   };
 }
 
+function aMinutos(hora) {
+  const [h, m] = String(hora).split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+/**
+ * ¿Se enciman dos rangos [inicio, inicio+duracion) en minutos del día?
+ */
+export function seTraslapan(horaA, duracionA, horaB, duracionB) {
+  const a1 = aMinutos(horaA);
+  const b1 = aMinutos(horaB);
+  return a1 < b1 + duracionB && b1 < a1 + duracionA;
+}
+
+/**
+ * Busca una cita activa (PENDIENTE/CONFIRMADA) que se encime con el horario dado
+ * para el mismo asesor o la misma propiedad.
+ * @returns {Promise<{tipo: 'asesor'|'propiedad', cita: object}|null>}
+ */
+export async function buscarTraslape({ inmobiliariaId, fecha, hora, duracionMin, asesorId = null, propiedadId = null, excluirCitaId = null }) {
+  if (!asesorId && !propiedadId) return null;
+  const fechaLocal = typeof fecha === 'string' ? parseISO(fecha) : fecha;
+  const or = [];
+  if (asesorId) or.push({ asesorId });
+  if (propiedadId) or.push({ propiedadId });
+
+  const citasDia = await prisma.cita.findMany({
+    where: {
+      inmobiliariaId,
+      fecha: { gte: startOfDay(fechaLocal), lt: addDays(startOfDay(fechaLocal), 1) },
+      estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+      ...(excluirCitaId ? { id: { not: excluirCitaId } } : {}),
+      OR: or,
+    },
+    select: { id: true, hora: true, duracionMin: true, asesorId: true, propiedadId: true },
+  });
+
+  for (const c of citasDia) {
+    if (!seTraslapan(hora, duracionMin, c.hora, c.duracionMin || duracionMin)) continue;
+    if (asesorId && c.asesorId === asesorId) return { tipo: 'asesor', cita: c };
+    if (propiedadId && c.propiedadId === propiedadId) return { tipo: 'propiedad', cita: c };
+  }
+  return null;
+}
+
 /**
  * Validar disponibilidad de slot antes de crear cita
  */
@@ -194,7 +239,8 @@ export async function validarSlotDisponible(
   fecha,
   hora,
   propiedadId = null,
-  asesorId = null
+  asesorId = null,
+  { excluirCitaId = null } = {}
 ) {
   try {
     const fechaLocal = typeof fecha === 'string' ? parseISO(fecha) : fecha;
@@ -277,45 +323,33 @@ export async function validarSlotDisponible(
       }
     }
 
-    // 6. Verificar capacidad
-    if (asesorId) {
-      // Verificar que asesor esté libre
-      const citaAsesor = await prisma.cita.findFirst({
-        where: {
-          inmobiliariaId,
-          fecha: {
-            gte: startOfDay(fechaLocal),
-            lt: addDays(startOfDay(fechaLocal), 1),
-          },
-          hora,
-          asesorId,
-          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
-        },
-      });
-
-      if (citaAsesor) {
-        return { valido: false, error: 'El asesor no está disponible en ese horario' };
+    const slotFinRango = addMinutes(slotDateTime, duracion);
+    if (isAfter(slotFinRango, horaFin)) {
+      return { valido: false, error: 'La cita terminaría después del horario de atención' };
+    }
+    if (horario.pausaInicio && horario.pausaFin) {
+      const pausaInicio = parse(horario.pausaInicio, 'HH:mm', fechaLocal);
+      const pausaFin = parse(horario.pausaFin, 'HH:mm', fechaLocal);
+      if (isBefore(slotDateTime, pausaFin) && isAfter(slotFinRango, pausaInicio)) {
+        return { valido: false, error: 'El horario cae en la pausa de comida' };
       }
     }
 
-    if (propiedadId) {
-      // Verificar que propiedad esté libre
-      const citaPropiedad = await prisma.cita.findFirst({
-        where: {
-          inmobiliariaId,
-          fecha: {
-            gte: startOfDay(fechaLocal),
-            lt: addDays(startOfDay(fechaLocal), 1),
-          },
-          hora,
-          propiedadId,
-          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
-        },
-      });
-
-      if (citaPropiedad) {
-        return { valido: false, error: 'La propiedad no está disponible en ese horario' };
-      }
+    // 6. Verificar que no se encime con otra cita del asesor o de la propiedad
+    const traslape = await buscarTraslape({
+      inmobiliariaId,
+      fecha: fechaLocal,
+      hora,
+      duracionMin: duracion,
+      asesorId,
+      propiedadId,
+      excluirCitaId,
+    });
+    if (traslape?.tipo === 'asesor') {
+      return { valido: false, error: 'El asesor ya tiene una cita en ese horario' };
+    }
+    if (traslape?.tipo === 'propiedad') {
+      return { valido: false, error: 'La propiedad ya tiene una visita en ese horario' };
     }
 
     return { valido: true };
@@ -359,7 +393,7 @@ export async function obtenerDiasConDisponibilidad(inmobiliariaId, limite = 10) 
 /**
  * Asignar asesor libre automáticamente
  */
-export async function asignarAsesorLibre(inmobiliariaId, fecha, hora) {
+export async function asignarAsesorLibre(inmobiliariaId, fecha, hora, { duracionMin = null, excluirCitaId = null } = {}) {
   const asesores = await prisma.usuario.findMany({
     where: {
       inmobiliariaId,
@@ -369,22 +403,26 @@ export async function asignarAsesorLibre(inmobiliariaId, fecha, hora) {
     select: { id: true, nombre: true },
   });
 
-  // Verificar cuál está libre
-  for (const asesor of asesores) {
-    const citaExistente = await prisma.cita.findFirst({
-      where: {
-        inmobiliariaId,
-        fecha: {
-          gte: startOfDay(fecha),
-          lt: addDays(startOfDay(fecha), 1),
-        },
-        hora,
-        asesorId: asesor.id,
-        estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
-      },
+  let duracion = duracionMin;
+  if (!duracion) {
+    const inmobiliaria = await prisma.inmobiliaria.findUnique({
+      where: { id: inmobiliariaId },
+      select: { duracionCitaMin: true },
     });
+    duracion = inmobiliaria?.duracionCitaMin || 60;
+  }
 
-    if (!citaExistente) {
+  // Verificar cuál está libre (sin citas que se encimen)
+  for (const asesor of asesores) {
+    const traslape = await buscarTraslape({
+      inmobiliariaId,
+      fecha,
+      hora,
+      duracionMin: duracion,
+      asesorId: asesor.id,
+      excluirCitaId,
+    });
+    if (!traslape) {
       return asesor;
     }
   }

@@ -1,9 +1,111 @@
 import { prisma } from '../index.js';
 import { obtenerDiasConDisponibilidad, obtenerSlotsDisponibles, validarSlotDisponible, asignarAsesorLibre } from './citas.service.js';
-import { crearNotificacion, notificarAsesorPorWhatsApp } from './notificaciones.service.js';
+import { crearNotificacion } from './notificaciones.service.js';
+import { elegirOpcionConIA } from './iaSeleccion.service.js';
+import { interpretarOpcion, interpretarFecha, interpretarHora, interpretarConfirmacion } from '../utils/interpretarRespuesta.js';
+import { construirUrlPropiedad, obtenerBaseUrlPublica } from '../utils/publicUrl.js';
 import { format } from 'date-fns';
 import es from 'date-fns/locale/es/index.js';
 import { parseISO } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
+
+const TIMEZONE = 'America/Mexico_City';
+const OPCION_CUALQUIERA = {
+  etiqueta: 'Cualquier propiedad disponible',
+  alias: ['cualquiera', 'cualquier', 'la que sea', 'me da igual', 'todas', 'ninguna en especial', 'no importa'],
+};
+
+function capitalizar(texto) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+async function guardarEstado(conversacionId, estado) {
+  await prisma.conversacion.update({
+    where: { id: conversacionId },
+    data: { flujoEstado: estado },
+  });
+}
+
+/**
+ * Resuelve la opción elegida: parser primero, IA como respaldo si hay duda.
+ * @returns {Promise<{indice?: number, candidatos?: number[], noDisponible?: boolean, fecha?: Date, hora?: string}|null>}
+ */
+async function resolverOpcion(resultado, mensaje, etiquetas, pregunta) {
+  if (resultado && resultado.indice !== undefined) return resultado;
+  if (resultado?.noDisponible) return resultado;
+  const subconjunto = resultado?.candidatos?.length ? resultado.candidatos : etiquetas.map((_, i) => i);
+  const indiceIA = await elegirOpcionConIA(mensaje, subconjunto.map((i) => etiquetas[i]), pregunta);
+  if (indiceIA !== null) return { indice: subconjunto[indiceIA], via: 'ia' };
+  return resultado;
+}
+
+function textoNoEntendi(resultado, etiquetas, total) {
+  if (resultado?.candidatos?.length > 1) {
+    const opciones = resultado.candidatos.map((i) => `*${i + 1}.* ${etiquetas[i]}`).join('\n');
+    return `Tengo varias opciones parecidas 🙂 ¿Cuál de estas?\n\n${opciones}\n\n📝 Responde con el número`;
+  }
+  if (resultado?.fueraDeRango) {
+    return `Solo tengo opciones del 1 al ${total} 🙂`;
+  }
+  return 'Perdón, no logré entender cuál elegiste 🙏';
+}
+
+// ---------- Mensajes de cada paso ----------
+
+function mensajeListaPropiedades(propiedades) {
+  let mensaje = '🏠 *¿Qué propiedad te gustaría visitar?*\n\n';
+  propiedades.forEach((prop, idx) => {
+    mensaje += `*${idx + 1}.* ${prop.titulo}\n`;
+    mensaje += `   📍 ${prop.colonia} | 🛏️ ${prop.recamaras} rec | 🚿 ${prop.banos} baños\n`;
+    mensaje += `   💰 ${formatPrecio(prop.precio)}\n\n`;
+  });
+  mensaje += `*${propiedades.length + 1}.* Cualquier propiedad disponible\n\n`;
+  mensaje += '📝 Responde con el número o el nombre de la propiedad (por ejemplo: "la 2")\n';
+  mensaje += '💡 O escribe *MENU* para cancelar';
+  return mensaje;
+}
+
+function mensajeListaDias(estado) {
+  let respuesta = `📅 *¿Qué día te gustaría agendar la visita?*\n`;
+  if (estado.propiedadNombre && estado.propiedadNombre !== OPCION_CUALQUIERA.etiqueta) {
+    respuesta += `🏠 Propiedad: ${estado.propiedadNombre}\n`;
+  }
+  respuesta += '\n*Días disponibles:*\n\n';
+  estado.diasDisponibles.forEach((iso, idx) => {
+    const fechaStr = format(new Date(iso), "EEEE d 'de' MMMM", { locale: es });
+    const slots = estado.diasSlots?.[idx];
+    respuesta += `*${idx + 1}.* ${capitalizar(fechaStr)}\n`;
+    if (slots) respuesta += `   ${slots} horarios disponibles\n`;
+    respuesta += '\n';
+  });
+  respuesta += '📝 Responde con el número o el día (por ejemplo: "mañana" o "el viernes")\n';
+  respuesta += '💡 O escribe *MENU* para cancelar';
+  return respuesta;
+}
+
+function mensajeListaHoras(estado) {
+  const fecha = new Date(estado.fechaSeleccionada);
+  let respuesta = `🕐 *¿A qué hora?*\n`;
+  respuesta += `📅 ${capitalizar(format(fecha, "EEEE d 'de' MMMM", { locale: es }))}\n\n`;
+  respuesta += '*Horarios disponibles:*\n\n';
+  estado.horasDisponibles.forEach((hora, idx) => {
+    respuesta += `*${idx + 1}.* ${hora}\n`;
+  });
+  respuesta += '\n📝 Responde con el número o la hora (por ejemplo: "a las 10")\n';
+  respuesta += '💡 O escribe *MENU* para cancelar';
+  return respuesta;
+}
+
+function etiquetasPropiedades(estado) {
+  return [
+    ...estado.opcionesPropiedades.map((p) => `${p.titulo}${p.colonia ? ` ${p.colonia}` : ''}`),
+    OPCION_CUALQUIERA.etiqueta,
+  ];
+}
+
+function etiquetasDias(estado) {
+  return estado.diasDisponibles.map((iso) => capitalizar(format(new Date(iso), "EEEE d 'de' MMMM", { locale: es })));
+}
 
 /**
  * Iniciar flujo de booking
@@ -17,7 +119,7 @@ export async function iniciarFlujoCita(conversacion, contexto) {
       orderBy: { createdAt: 'desc' },
     });
 
-    let estado = {
+    const estado = {
       paso: 1,
       propiedadId: interes?.propiedadId || null,
       propiedadNombre: interes?.propiedad?.titulo || null,
@@ -33,7 +135,9 @@ export async function iniciarFlujoCita(conversacion, contexto) {
 
     // Si tiene propiedad de interés, ir directo a paso 2 (días)
     if (interes) {
-      return await procesarPaso2SeleccionarDia(conversacion, contexto, estado);
+      estado.paso = 2;
+      await guardarEstado(conversacion.id, estado);
+      return await procesarPaso2SeleccionarDia(conversacion, null, contexto, estado);
     }
 
     // Si no, listar propiedades disponibles
@@ -43,6 +147,7 @@ export async function iniciarFlujoCita(conversacion, contexto) {
         estadoPropiedad: 'DISPONIBLE',
       },
       take: 20,
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         titulo: true,
@@ -58,18 +163,18 @@ export async function iniciarFlujoCita(conversacion, contexto) {
       return 'No hay propiedades disponibles en este momento. Por favor escribe *AGENTE* para hablar con un asesor.';
     }
 
-    let mensaje = '🏠 *¿Qué propiedad te gustaría visitar?*\n\n';
-    propiedades.forEach((prop, idx) => {
-      mensaje += `*${idx + 1}.* ${prop.titulo}\n`;
-      mensaje += `   📍 ${prop.colonia} | 🛏️ ${prop.recamaras} rec | 🚿 ${prop.banos} baños\n`;
-      mensaje += `   💰 ${formatPrecio(prop.precio)}\n\n`;
-    });
-    mensaje += `*${propiedades.length + 1}.* Cualquier propiedad disponible\n\n`;
-    mensaje += '📝 Responde con el número de tu elección\n';
-    mensaje += '💡 O escribe *MENU* para cancelar';
+    // Guardar la lista mostrada para que "la 6" siempre sea la misma propiedad
+    estado.opcionesPropiedades = propiedades.map((p) => ({
+      id: p.id,
+      titulo: p.titulo,
+      colonia: p.colonia,
+      recamaras: p.recamaras,
+      banos: p.banos,
+      precio: String(p.precio),
+    }));
+    await guardarEstado(conversacion.id, estado);
 
-    return mensaje;
-
+    return mensajeListaPropiedades(estado.opcionesPropiedades);
   } catch (error) {
     console.error('Error iniciando flujo cita:', error);
     await limpiarFlujo(conversacion.id);
@@ -86,7 +191,7 @@ export async function procesarFlujoCita(conversacion, mensaje, contexto) {
     const mensajeNorm = mensaje.trim().toUpperCase();
 
     // Comandos de salida
-    if (mensajeNorm === 'MENU' || mensajeNorm === 'CANCELAR') {
+    if (mensajeNorm === 'MENU' || mensajeNorm === 'MENÚ' || mensajeNorm === 'CANCELAR' || mensajeNorm === 'SALIR') {
       await limpiarFlujo(conversacion.id);
       return 'Proceso cancelado. ¿En qué más puedo ayudarte?';
     }
@@ -105,7 +210,6 @@ export async function procesarFlujoCita(conversacion, mensaje, contexto) {
         await limpiarFlujo(conversacion.id);
         return 'Proceso reiniciado. Escribe *AGENDAR* para comenzar de nuevo.';
     }
-
   } catch (error) {
     console.error('Error procesando flujo cita:', error);
     await limpiarFlujo(conversacion.id);
@@ -114,46 +218,56 @@ export async function procesarFlujoCita(conversacion, mensaje, contexto) {
 }
 
 /**
- * Paso 1: Seleccionar propiedad
+ * Paso 1: Seleccionar propiedad ("6", "la 6", "la seis", "la casa amplia"...)
  */
 async function procesarPaso1SeleccionarPropiedad(conversacion, mensaje, contexto, estado) {
-  const seleccion = parseInt(mensaje.trim());
-
-  if (isNaN(seleccion)) {
-    return 'Por favor responde con el número de la propiedad que te interesa.';
+  // Conversaciones iniciadas antes de guardar la lista: reconstruirla en el mismo orden
+  if (!estado.opcionesPropiedades) {
+    const propiedades = await prisma.propiedad.findMany({
+      where: { inmobiliariaId: contexto.inmobiliaria.id, estadoPropiedad: 'DISPONIBLE' },
+      take: 20,
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, titulo: true, colonia: true, recamaras: true, banos: true, precio: true },
+    });
+    estado.opcionesPropiedades = propiedades.map((p) => ({ ...p, precio: String(p.precio) }));
   }
 
-  const propiedades = await prisma.propiedad.findMany({
-    where: {
-      inmobiliariaId: contexto.inmobiliaria.id,
-      estadoPropiedad: 'DISPONIBLE',
-    },
-    take: 20,
-  });
+  const etiquetas = etiquetasPropiedades(estado);
+  const opciones = [
+    ...estado.opcionesPropiedades.map((p, i) => ({ etiqueta: etiquetas[i] })),
+    OPCION_CUALQUIERA,
+  ];
+  const resultado = await resolverOpcion(
+    interpretarOpcion(mensaje, opciones),
+    mensaje,
+    etiquetas,
+    '¿Qué propiedad te gustaría visitar?'
+  );
 
-  if (seleccion === propiedades.length + 1) {
-    // Cualquier propiedad
+  if (!resultado || resultado.indice === undefined) {
+    await guardarEstado(conversacion.id, estado);
+    const aviso = textoNoEntendi(resultado, etiquetas, etiquetas.length);
+    if (resultado?.candidatos?.length > 1) return aviso;
+    return `${aviso}\n\n${mensajeListaPropiedades(estado.opcionesPropiedades)}`;
+  }
+
+  if (resultado.indice === estado.opcionesPropiedades.length) {
     estado.propiedadId = null;
-    estado.propiedadNombre = 'Cualquier propiedad';
-  } else if (seleccion >= 1 && seleccion <= propiedades.length) {
-    const propSeleccionada = propiedades[seleccion - 1];
+    estado.propiedadNombre = OPCION_CUALQUIERA.etiqueta;
+  } else {
+    const propSeleccionada = estado.opcionesPropiedades[resultado.indice];
     estado.propiedadId = propSeleccionada.id;
     estado.propiedadNombre = propSeleccionada.titulo;
-  } else {
-    return `Por favor elige un número entre 1 y ${propiedades.length + 1}.`;
   }
 
   estado.paso = 2;
-  await prisma.conversacion.update({
-    where: { id: conversacion.id },
-    data: { flujoEstado: estado },
-  });
+  await guardarEstado(conversacion.id, estado);
 
   return await procesarPaso2SeleccionarDia(conversacion, null, contexto, estado);
 }
 
 /**
- * Paso 2: Seleccionar día
+ * Paso 2: Seleccionar día ("2", "la 2", "mañana", "el viernes", "el 26")
  */
 async function procesarPaso2SeleccionarDia(conversacion, mensaje, contexto, estado) {
   // Si es primera vez (mensaje null), mostrar días
@@ -165,56 +279,48 @@ async function procesarPaso2SeleccionarDia(conversacion, mensaje, contexto, esta
       return 'No hay disponibilidad en los próximos días. Por favor escribe *AGENTE* para hablar con un asesor.';
     }
 
-    let respuesta = `📅 *¿Qué día te gustaría agendar la visita?*\n`;
-    if (estado.propiedadNombre) {
-      respuesta += `🏠 Propiedad: ${estado.propiedadNombre}\n`;
+    estado.diasDisponibles = dias.map((d) => d.fecha.toISOString());
+    estado.diasSlots = dias.map((d) => d.slotsDisponibles);
+    await guardarEstado(conversacion.id, estado);
+
+    return mensajeListaDias(estado);
+  }
+
+  if (!estado.diasDisponibles?.length) {
+    return await procesarPaso2SeleccionarDia(conversacion, null, contexto, estado);
+  }
+
+  const fechas = estado.diasDisponibles.map((iso) => new Date(iso));
+  const hoy = utcToZonedTime(new Date(), TIMEZONE);
+  const etiquetas = etiquetasDias(estado);
+  const resultado = await resolverOpcion(
+    interpretarFecha(mensaje, fechas, hoy),
+    mensaje,
+    etiquetas,
+    '¿Qué día te gustaría agendar la visita?'
+  );
+
+  if (!resultado || resultado.indice === undefined) {
+    if (resultado?.noDisponible) {
+      const cual = resultado.fecha
+        ? capitalizar(format(resultado.fecha, "EEEE d 'de' MMMM", { locale: es }))
+        : 'Ese día';
+      return `${cual} no tengo horarios disponibles 🙏 Elige uno de estos días:\n\n${mensajeListaDias(estado)}`;
     }
-    respuesta += '\n*Días disponibles:*\n\n';
-
-    dias.forEach((dia, idx) => {
-      const fechaStr = format(dia.fecha, "EEEE d 'de' MMMM", { locale: es });
-      respuesta += `*${idx + 1}.* ${fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1)}\n`;
-      respuesta += `   ${dia.slotsDisponibles} horarios disponibles\n\n`;
-    });
-
-    respuesta += '📝 Responde con el número del día\n';
-    respuesta += '💡 O escribe *MENU* para cancelar';
-
-    // Guardar días en estado
-    estado.diasDisponibles = dias.map(d => d.fecha.toISOString());
-    await prisma.conversacion.update({
-      where: { id: conversacion.id },
-      data: { flujoEstado: estado },
-    });
-
-    return respuesta;
+    const aviso = textoNoEntendi(resultado, etiquetas, etiquetas.length);
+    if (resultado?.candidatos?.length > 1) return aviso;
+    return `${aviso}\n\n${mensajeListaDias(estado)}`;
   }
 
-  // Procesar selección
-  const seleccion = parseInt(mensaje.trim());
-
-  if (isNaN(seleccion) || !estado.diasDisponibles) {
-    return 'Por favor responde con el número del día que prefieres.';
-  }
-
-  if (seleccion < 1 || seleccion > estado.diasDisponibles.length) {
-    return `Por favor elige un número entre 1 y ${estado.diasDisponibles.length}.`;
-  }
-
-  const fechaSeleccionada = estado.diasDisponibles[seleccion - 1];
-  estado.fechaSeleccionada = fechaSeleccionada;
+  estado.fechaSeleccionada = estado.diasDisponibles[resultado.indice];
   estado.paso = 3;
-
-  await prisma.conversacion.update({
-    where: { id: conversacion.id },
-    data: { flujoEstado: estado },
-  });
+  await guardarEstado(conversacion.id, estado);
 
   return await procesarPaso3SeleccionarHora(conversacion, null, contexto, estado);
 }
 
 /**
- * Paso 3: Seleccionar hora
+ * Paso 3: Seleccionar hora ("3", "la 3", "a las 10", "4 pm")
  */
 async function procesarPaso3SeleccionarHora(conversacion, mensaje, contexto, estado) {
   const fecha = parseISO(estado.fechaSeleccionada);
@@ -227,98 +333,87 @@ async function procesarPaso3SeleccionarHora(conversacion, mensaje, contexto, est
       estado.propiedadId
     );
 
-    const slotsDisponibles = slots.filter(s => s.disponible);
+    const slotsDisponibles = slots.filter((s) => s.disponible);
 
     if (slotsDisponibles.length === 0) {
       // Volver a paso 2
       estado.paso = 2;
-      await prisma.conversacion.update({
-        where: { id: conversacion.id },
-        data: { flujoEstado: estado },
-      });
-      return 'Lo siento, ya no hay horarios disponibles para ese día. Por favor elige otro día.';
+      await guardarEstado(conversacion.id, estado);
+      return `Lo siento, ya no hay horarios disponibles para ese día. Elige otro día:\n\n${mensajeListaDias(estado)}`;
     }
 
-    let respuesta = `🕐 *¿A qué hora?*\n`;
-    respuesta += `📅 ${format(fecha, "EEEE d 'de' MMMM", { locale: es })}\n\n`;
-    respuesta += '*Horarios disponibles:*\n\n';
+    estado.horasDisponibles = slotsDisponibles.map((s) => s.hora);
+    await guardarEstado(conversacion.id, estado);
 
-    slotsDisponibles.forEach((slot, idx) => {
-      respuesta += `*${idx + 1}.* ${slot.hora}\n`;
-    });
-
-    respuesta += '\n📝 Responde con el número del horario\n';
-    respuesta += '💡 O escribe *MENU* para cancelar';
-
-    estado.horasDisponibles = slotsDisponibles.map(s => s.hora);
-    await prisma.conversacion.update({
-      where: { id: conversacion.id },
-      data: { flujoEstado: estado },
-    });
-
-    return respuesta;
+    return mensajeListaHoras(estado);
   }
 
-  // Procesar selección
-  const seleccion = parseInt(mensaje.trim());
-
-  if (isNaN(seleccion) || !estado.horasDisponibles) {
-    return 'Por favor responde con el número del horario que prefieres.';
+  if (!estado.horasDisponibles?.length) {
+    return await procesarPaso3SeleccionarHora(conversacion, null, contexto, estado);
   }
 
-  if (seleccion < 1 || seleccion > estado.horasDisponibles.length) {
-    return `Por favor elige un número entre 1 y ${estado.horasDisponibles.length}.`;
+  const etiquetas = estado.horasDisponibles;
+  const resultado = await resolverOpcion(
+    interpretarHora(mensaje, estado.horasDisponibles),
+    mensaje,
+    etiquetas,
+    '¿A qué hora?'
+  );
+
+  if (!resultado || resultado.indice === undefined) {
+    if (resultado?.noDisponible) {
+      return `A las ${resultado.hora} no tengo lugar ese día 🙏 Elige uno de estos horarios:\n\n${mensajeListaHoras(estado)}`;
+    }
+    const aviso = textoNoEntendi(resultado, etiquetas, etiquetas.length);
+    if (resultado?.candidatos?.length > 1) return aviso;
+    return `${aviso}\n\n${mensajeListaHoras(estado)}`;
   }
 
-  const horaSeleccionada = estado.horasDisponibles[seleccion - 1];
-  estado.horaSeleccionada = horaSeleccionada;
+  estado.horaSeleccionada = estado.horasDisponibles[resultado.indice];
   estado.paso = 4;
-
-  await prisma.conversacion.update({
-    where: { id: conversacion.id },
-    data: { flujoEstado: estado },
-  });
+  await guardarEstado(conversacion.id, estado);
 
   return await procesarPaso4Confirmar(conversacion, null, contexto, estado);
 }
 
+function linkPropiedad(estado, contexto) {
+  if (!estado.propiedadId) return null;
+  return construirUrlPropiedad(estado.propiedadId, contexto.inmobiliaria);
+}
+
 /**
- * Paso 4: Confirmar
+ * Paso 4: Confirmar ("1", "sí", "confirmo" / "0", "no")
  */
 async function procesarPaso4Confirmar(conversacion, mensaje, contexto, estado) {
   const fecha = parseISO(estado.fechaSeleccionada);
 
-  // Si es primera vez, mostrar resumen
-  if (!mensaje) {
-    const fechaStr = format(fecha, "EEEE d 'de' MMMM 'a las' HH:mm", {
-      locale: es,
-    }).replace(/:00$/, '');
-    const fechaFormateada = `${fechaStr.split(' a las ')[0]} a las ${estado.horaSeleccionada}`;
-
+  const resumen = () => {
+    const dia = capitalizar(format(fecha, "EEEE d 'de' MMMM", { locale: es }));
     let respuesta = '✅ *Resumen de tu cita*\n\n';
-    if (estado.propiedadNombre && estado.propiedadNombre !== 'Cualquier propiedad') {
+    if (estado.propiedadNombre && estado.propiedadNombre !== OPCION_CUALQUIERA.etiqueta) {
       respuesta += `🏠 *Propiedad:* ${estado.propiedadNombre}\n`;
+      const link = linkPropiedad(estado, contexto);
+      if (link) respuesta += `🔗 ${link}\n`;
     }
-    respuesta += `📅 *Fecha:* ${fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}\n\n`;
+    respuesta += `📅 *Fecha:* ${dia} a las ${estado.horaSeleccionada}\n\n`;
     respuesta += '*¿Confirmas la cita?*\n\n';
-    respuesta += '✅ Responde *1* para confirmar\n';
-    respuesta += '❌ Responde *0* para cancelar';
-
+    respuesta += '✅ Responde *1* o *sí* para confirmar\n';
+    respuesta += '❌ Responde *0* o *no* para cancelar';
     return respuesta;
-  }
+  };
 
-  // Procesar confirmación
-  const respuesta = mensaje.trim();
+  // Si es primera vez, mostrar resumen
+  if (!mensaje) return resumen();
 
-  if (respuesta === '1') {
-    // Crear cita
+  const confirmacion = interpretarConfirmacion(mensaje);
+  if (confirmacion === true) {
     return await crearCita(conversacion, contexto, estado);
-  } else if (respuesta === '0') {
+  }
+  if (confirmacion === false) {
     await limpiarFlujo(conversacion.id);
     return 'Cita cancelada. ¿En qué más puedo ayudarte?';
-  } else {
-    return 'Por favor responde *1* para confirmar o *0* para cancelar.';
   }
+  return `Perdón, no te entendí 🙏 ¿Confirmas la cita? Responde *sí* o *no*.\n\n${resumen()}`;
 }
 
 /**
@@ -407,7 +502,7 @@ async function crearCita(conversacion, contexto, estado) {
         `*Prospecto:* ${prospecto.nombre} (${prospecto.telefono})\n` +
         `*Fecha:* ${fechaStr} ${hora}\n` +
         `${cita.propiedad ? `*Propiedad:* ${cita.propiedad.titulo}\n` : ''}` +
-        `\n🔗 Ver en panel: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/citas`;
+        `\n🔗 Ver en panel: ${obtenerBaseUrlPublica()}/admin/citas`;
 
       // WhatsApp si tiene teléfono
       if (cita.asesor.telefonoWhatsapp && conversacion.numeroWhatsappId) {
@@ -435,11 +530,12 @@ async function crearCita(conversacion, contexto, estado) {
 
     // Respuesta al cliente
     const fechaStr = format(fecha, "EEEE d 'de' MMMM", { locale: es });
-    let respuesta = `✅ *¡Cita confirmada!*\n\n`;
+    let respuesta = `✅ *¡Cita agendada!*\n\n`;
     respuesta += `📅 ${fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1)}\n`;
     respuesta += `🕐 ${hora}\n`;
     if (cita.propiedad) {
       respuesta += `🏠 ${cita.propiedad.titulo}\n`;
+      respuesta += `🔗 ${construirUrlPropiedad(cita.propiedad.id, contexto.inmobiliaria)}\n`;
     }
     if (cita.asesor) {
       respuesta += `👤 Asesor: ${cita.asesor.nombre}\n`;

@@ -2,6 +2,9 @@ import express from 'express';
 import { prisma } from '../index.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { generarMensajeBienvenida } from '../utils/botMessages.js';
+import { generarRespuestaIA } from '../services/ia.service.js';
+import { obtenerContextoConversacion } from '../services/whatsappBot.service.js';
+import { iniciarFlujoCita, procesarFlujoCita } from '../services/citasFlow.service.js';
 
 const router = express.Router();
 
@@ -133,7 +136,7 @@ router.post('/mensaje', async (req, res, next) => {
     if (
       mensajeNormalizado === 'BAJA' ||
       mensajeNormalizado === 'STOP' ||
-      mensajeNormalizado === 'CANCELAR' ||
+      (mensajeNormalizado === 'CANCELAR' && !conversacion.flujoBot) ||
       mensajeNormalizado === 'NO MAS' ||
       mensajeNormalizado.includes('NO CONTACTAR')
     ) {
@@ -197,8 +200,17 @@ router.post('/mensaje', async (req, res, next) => {
       pasadoAHumano = true;
     }
     // Respuestas automáticas inteligentes
+    // Mismo motor que el bot real de WhatsApp (intents + flujo de citas), sin enviar nada
     else {
-      respuestaBot = generarRespuestaAutomatica(mensaje, prospecto.inmobiliaria);
+      const contexto = await obtenerContextoConversacion(conversacion.id, prospecto);
+      if (conversacion.flujoBot === 'booking') {
+        respuestaBot = await procesarFlujoCita(conversacion, mensaje, contexto);
+      } else {
+        respuestaBot = await generarRespuestaIA(mensaje, contexto);
+        if (respuestaBot === '__INICIAR_FLUJO_BOOKING__') {
+          respuestaBot = await iniciarFlujoCita(conversacion, contexto);
+        }
+      }
     }
 
     // Guardar respuesta del bot
@@ -232,74 +244,5 @@ router.post('/mensaje', async (req, res, next) => {
     next(error);
   }
 });
-
-// Función auxiliar para generar respuestas automáticas
-function generarRespuestaAutomatica(mensaje, inmobiliaria) {
-  const mensajeLower = mensaje.toLowerCase();
-
-  // Consultas sobre propiedades
-  if (
-    mensajeLower.includes('casa') ||
-    mensajeLower.includes('propiedad') ||
-    mensajeLower.includes('departamento') ||
-    mensajeLower.includes('terreno')
-  ) {
-    return (
-      'Tenemos varias opciones disponibles:\n\n' +
-      '🏠 Casas en venta desde $950,000\n' +
-      '🏢 Departamentos en renta desde $4,500/mes\n' +
-      '🏘️ Terrenos desde $950,000\n\n' +
-      '¿Te gustaría ver alguna en específico? También puedo conectarte con un ejecutivo para una asesoría personalizada. ' +
-      'Escribe AGENTE para hablar con una persona.'
-    );
-  }
-
-  // Consultas sobre créditos
-  if (
-    mensajeLower.includes('crédito') ||
-    mensajeLower.includes('infonavit') ||
-    mensajeLower.includes('bancario') ||
-    mensajeLower.includes('fovissste') ||
-    mensajeLower.includes('financiamiento')
-  ) {
-    return (
-      'Aceptamos diferentes formas de pago:\n\n' +
-      '✅ Contado\n' +
-      '✅ Crédito bancario\n' +
-      '✅ Infonavit\n' +
-      '✅ Fovissste\n\n' +
-      'La mayoría de nuestras propiedades califican para créditos. ' +
-      '¿Te gustaría que un ejecutivo te explique las opciones específicas para tu situación? ' +
-      'Escribe AGENTE.'
-    );
-  }
-
-  // Consultas sobre precios
-  if (
-    mensajeLower.includes('precio') ||
-    mensajeLower.includes('costo') ||
-    mensajeLower.includes('cuanto') ||
-    mensajeLower.includes('cuánto')
-  ) {
-    return (
-      'Nuestros precios varían según la propiedad:\n\n' +
-      '💰 Casas: desde $950,000 hasta $3,850,000\n' +
-      '💰 Departamentos en renta: desde $4,500/mes\n' +
-      '💰 Terrenos: desde $950,000\n\n' +
-      '¿Te interesa alguna en particular? Puedo darte más detalles o conectarte con un ejecutivo. ' +
-      'Escribe AGENTE para asesoría personalizada.'
-    );
-  }
-
-  // Respuesta genérica
-  return (
-    'Gracias por tu mensaje. 🤖 Soy un asistente automatizado y estoy aquí para ayudarte con:\n\n' +
-    '📋 Información sobre propiedades disponibles\n' +
-    '💳 Opciones de crédito y financiamiento\n' +
-    '📍 Ubicaciones y características\n' +
-    '👤 Conectarte con un ejecutivo\n\n' +
-    '¿En qué te gustaría que te ayude? O escribe AGENTE para hablar con una persona.'
-  );
-}
 
 export default router;

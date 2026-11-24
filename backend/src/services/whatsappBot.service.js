@@ -253,8 +253,10 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
     const mensajeNormalizado = mensaje.toUpperCase().trim();
 
     // Comando BAJA
+    // "CANCELAR" dentro de un flujo (agendar cita) cancela el flujo, no da de baja al cliente
+    const enFlujo = Boolean(conversacion.flujoBot);
     if (mensajeNormalizado === 'BAJA' || mensajeNormalizado === 'STOP' || 
-        mensajeNormalizado === 'CANCELAR' || mensajeNormalizado === 'NO MAS') {
+        (mensajeNormalizado === 'CANCELAR' && !enFlujo) || mensajeNormalizado === 'NO MAS') {
       
       await prisma.prospecto.update({
         where: { id: prospecto.id },
@@ -467,7 +469,7 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
 // Función eliminada: La divulgación de IA ahora está inline en procesarMensajeBot
 // Ver línea ~46-50 donde se crea el mensaje de bienvenida con divulgación legal
 
-async function obtenerContextoConversacion(conversacionId, prospecto) {
+export async function obtenerContextoConversacion(conversacionId, prospecto) {
   const mensajes = await prisma.mensaje.findMany({
     where: { conversacionId },
     orderBy: { createdAt: 'asc' },
