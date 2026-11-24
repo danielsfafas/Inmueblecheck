@@ -3,11 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, addWeeks, isSameDay, parseISO, isBefore, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Calendar, List, Plus, ChevronLeft, ChevronRight, MessageCircle, LayoutDashboard, Globe, Pencil, Loader2, X,
+  Calendar, CalendarDays, List, Plus, ChevronLeft, ChevronRight, MessageCircle, LayoutDashboard, Globe, Pencil, Loader2, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import CitaFormModal from '../../components/CitaFormModal';
+import AgendaDia from '../../components/AgendaDia';
 
 const ESTADOS = {
   PENDIENTE: { texto: 'Pendiente', clase: 'bg-amber-100 text-amber-900', punto: 'bg-amber-500' },
@@ -50,13 +51,13 @@ function fechaDeCita(cita) {
 }
 
 export default function CitasPage() {
-  const [vista, setVista] = useState('list');
+  const [vista, setVista] = useState('day');
   const [citas, setCitas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ estado: '', origen: '', asesorId: '' });
   const [asesores, setAsesores] = useState([]);
   const [semanaInicio, setSemanaInicio] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [modal, setModal] = useState({ abierto: false, cita: null, fecha: null });
+  const [modal, setModal] = useState({ abierto: false, cita: null, fecha: null, hora: '', asesorId: '' });
   const [cancelando, setCancelando] = useState(null);
   const [accionEnCurso, setAccionEnCurso] = useState(null);
 
@@ -85,9 +86,9 @@ export default function CitasPage() {
     api.get('/citas/asesores').then(({ data }) => setAsesores(data || [])).catch(() => setAsesores([]));
   }, []);
 
-  const abrirNueva = (fecha = null) => setModal({ abierto: true, cita: null, fecha });
-  const abrirEditar = (cita) => setModal({ abierto: true, cita, fecha: null });
-  const cerrarModal = useCallback(() => setModal({ abierto: false, cita: null, fecha: null }), []);
+  const abrirNueva = (fecha = null, hora = '', asesorId = '') => setModal({ abierto: true, cita: null, fecha, hora, asesorId });
+  const abrirEditar = (cita) => setModal({ abierto: true, cita, fecha: null, hora: '', asesorId: '' });
+  const cerrarModal = useCallback(() => setModal({ abierto: false, cita: null, fecha: null, hora: '', asesorId: '' }), []);
 
   const cambiarEstado = async (cita, estado) => {
     setAccionEnCurso(`${cita.id}:${estado}`);
@@ -160,6 +161,7 @@ export default function CitasPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5" role="tablist" aria-label="Vista">
             {[
+              ['day', 'Día', CalendarDays],
               ['list', 'Lista', List],
               ['week', 'Semana', Calendar],
             ].map(([valor, texto, Icono]) => (
@@ -190,13 +192,15 @@ export default function CitasPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
-        <select value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-          className="input-field sm:w-48" aria-label="Filtrar por estado">
-          <option value="">Todos los estados</option>
-          {Object.entries(ESTADOS).map(([valor, { texto }]) => (
-            <option key={valor} value={valor}>{texto}</option>
-          ))}
-        </select>
+        {vista !== 'day' && (
+          <select value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+            className="input-field sm:w-48" aria-label="Filtrar por estado">
+            <option value="">Todos los estados</option>
+            {Object.entries(ESTADOS).map(([valor, { texto }]) => (
+              <option key={valor} value={valor}>{texto}</option>
+            ))}
+          </select>
+        )}
         <select value={filtros.origen} onChange={(e) => setFiltros({ ...filtros, origen: e.target.value })}
           className="input-field sm:w-48" aria-label="Filtrar por origen">
           <option value="">Todos los orígenes</option>
@@ -212,7 +216,18 @@ export default function CitasPage() {
         )}
       </div>
 
-      {loading ? (
+      {vista === 'day' ? (
+        <AgendaDia
+          asesores={asesores}
+          filtros={filtros}
+          version={version}
+          onNueva={({ fecha, hora, asesorId }) => abrirNueva(fecha, hora, asesorId)}
+          onEditar={abrirEditar}
+          onCancelar={setCancelando}
+          cambiarEstado={cambiarEstado}
+          accionEnCurso={accionEnCurso}
+        />
+      ) : loading ? (
         <div className="flex h-64 items-center justify-center" role="status" aria-label="Cargando citas">
           <Loader2 className="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
         </div>
@@ -405,10 +420,12 @@ export default function CitasPage() {
 
       {modal.abierto && (
       <CitaFormModal
-        key={modal.cita?.id || `nueva-${modal.fecha || 'hoy'}`}
+        key={modal.cita?.id || `nueva-${modal.fecha || 'hoy'}-${modal.hora}-${modal.asesorId}`}
         isOpen={modal.abierto}
         cita={modal.cita}
         fechaInicial={modal.fecha}
+        horaInicial={modal.hora}
+        asesorInicial={modal.asesorId}
         onClose={cerrarModal}
         onSaved={() => cargarCitas()}
       />

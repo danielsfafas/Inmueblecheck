@@ -51,6 +51,12 @@
     scrollbar-width: none;
   }
 
+  /* Horarios bloqueados (comida, cierres) en la agenda. */
+  .bg-stripes-gray {
+    background-color: theme('colors.gray.50');
+    background-image: repeating-linear-gradient(135deg, theme('colors.gray.200') 0 1px, transparent 1px 8px);
+  }
+
   .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }

@@ -304,30 +304,30 @@ export default function ConfiguracionPage() {
             ))}
           </ul>
 
-          <div className="hidden lg:block overflow-hidden border border-gray-200 rounded-lg">
+          <div className="hidden lg:block overflow-x-auto border border-gray-200 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">WhatsApp</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">WhatsApp</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {usuarios.map((usuario) => (
                   <tr key={usuario.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                       {usuario.nombre}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 break-all">
                       {usuario.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {usuario.rol}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {editandoUsuario === usuario.id ? (
                         <input
                           type="tel"
@@ -335,7 +335,7 @@ export default function ConfiguracionPage() {
                           placeholder="+5215512345678"
                           ref={telefonoInputRef}
                           aria-label={`WhatsApp de ${usuario.nombre}`}
-                          className="px-2 py-1 border border-gray-300 rounded"
+                          className="input-field w-44 py-1.5 tabular-nums"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               actualizarTelefonoUsuario(usuario.id, e.target.value);
@@ -349,20 +349,20 @@ export default function ConfiguracionPage() {
                         <span>{usuario.telefonoWhatsapp || '-'}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                       {editandoUsuario === usuario.id ? (
-                        <span className="inline-flex gap-3">
+                        <span className="inline-flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => actualizarTelefonoUsuario(usuario.id, telefonoInputRef.current?.value || '')}
-                            className="text-primary-600 hover:text-primary-800"
+                            className="min-h-[36px] rounded-lg bg-primary-600 px-3 text-white hover:bg-primary-700"
                           >
                             Guardar
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditandoUsuario(null)}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="min-h-[36px] rounded-lg px-3 text-gray-700 hover:bg-gray-100"
                           >
                             Cancelar
                           </button>

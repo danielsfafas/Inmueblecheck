@@ -16,7 +16,7 @@ function soloDigitos(v) {
  * Crear (cita = null) o editar/reprogramar una cita.
  * Las horas salen de GET /horarios/slots (Horarios, Cierres y duración configurada).
  */
-export default function CitaFormModal({ isOpen, onClose, onSaved, cita = null, fechaInicial = null }) {
+export default function CitaFormModal({ isOpen, onClose, onSaved, cita = null, fechaInicial = null, horaInicial = '', asesorInicial = '' }) {
   const editando = Boolean(cita);
   const [prospectos, setProspectos] = useState([]);
   const [propiedades, setPropiedades] = useState([]);
@@ -28,8 +28,8 @@ export default function CitaFormModal({ isOpen, onClose, onSaved, cita = null, f
   const [nuevo, setNuevo] = useState({ nombre: '', telefono: '' });
   const [propiedadId, setPropiedadId] = useState(cita?.propiedad?.id || '');
   const [fecha, setFecha] = useState(cita ? String(cita.fecha).slice(0, 10) : fechaInicial || hoyISO());
-  const [horaElegida, setHora] = useState(cita?.hora || '');
-  const [asesorId, setAsesorId] = useState(cita?.asesor?.id || '');
+  const [horaElegida, setHora] = useState(cita?.hora || horaInicial || '');
+  const [asesorId, setAsesorId] = useState(cita?.asesor?.id || asesorInicial || '');
   const [notas, setNotas] = useState(cita?.notas || '');
   const [notificarCliente, setNotificarCliente] = useState(false);
 
