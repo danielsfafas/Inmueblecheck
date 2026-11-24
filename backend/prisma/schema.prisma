@@ -1,0 +1,660 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// CONFIGURACIÓN Y MULTI-TENANT
+
+model Inmobiliaria {
+  id                        String    @id @default(uuid())
+  slug                      String    @unique
+  nombre                    String
+  razonSocial               String
+  rfc                       String?
+  domicilio                 String?
+  telefono                  String
+  email                     String    @unique
+  emailPrivacidad           String
+  horario                   String?
+  activa                    Boolean   @default(true)
+  
+  // Configuración legal
+  registroProfeco           String?
+  licenciaEstatal           String?
+  urlAvisoPrivacidad        String?
+  
+  // Leyendas configurables
+  leyendaProfeco            String?
+  leyendaNom247             String?
+  
+  // Opciones
+  permiteCookies            Boolean   @default(false)
+  
+  // Configuración bot y citas
+  horasAutoresumeBotPausa   Int       @default(24)
+  duracionCitaMin           Int       @default(60)
+  tiempoAntelacionMin       Int       @default(120)
+  diasConCitasAdelante      Int       @default(45)
+  
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  
+  // Relaciones
+  usuarios                  Usuario[]
+  propiedades               Propiedad[]
+  prospectos                Prospecto[]
+  conversaciones            Conversacion[]
+  consentimientos           Consentimiento[]
+  actividades               Actividad[]
+  recordatorios             Recordatorio[]
+  notificaciones            Notificacion[]
+  citas                     Cita[]
+  horariosCitas             HorarioCitas[]
+  cierresCalendario         CierreCalendario[]
+
+  @@index([email])
+  @@index([slug])
+}
+
+model Usuario {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  nombre            String
+  email             String
+  password          String
+  rol               RolUsuario   @default(EJECUTIVO)
+  activo            Boolean      @default(true)
+  
+  // WhatsApp para notificaciones de escalamiento
+  telefonoWhatsapp  String?
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relaciones
+  prospectosAsignados     Prospecto[]
+  actividades             Actividad[]
+  recordatoriosCreados    Recordatorio[]
+  sesiones                Sesion[]
+  numerosWhatsapp         NumeroWhatsapp[]
+  listaNegra              ListaNegra[]
+  listaBlanca             ListaBlanca[]
+  notificaciones          Notificacion[]
+  citasAsignadas          Cita[]
+
+  @@unique([inmobiliariaId, email])
+  @@index([inmobiliariaId])
+  @@index([email])
+}
+
+model Sesion {
+  id                String    @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  token             String    @unique
+  ip                String?
+  userAgent         String?
+  
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime
+  
+  @@index([usuarioId])
+  @@index([token])
+}
+
+enum RolUsuario {
+  ADMIN
+  SUPERVISOR
+  EJECUTIVO
+}
+
+// PROPIEDADES
+
+model Propiedad {
+  id                    String       @id @default(uuid())
+  inmobiliariaId        String
+  inmobiliaria          Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  titulo                String
+  descripcion           String       @db.Text
+  tipo                  TipoOperacion
+  precio                Decimal      @db.Decimal(12, 2)
+  
+  // Ubicación
+  direccion             String?
+  colonia               String
+  ciudad                String
+  estado                String       @default("Hidalgo")
+  codigoPostal          String?
+  latitud               Decimal?     @db.Decimal(10, 8)
+  longitud              Decimal?     @db.Decimal(11, 8)
+  latitudAprox          Decimal?     @db.Decimal(10, 8)
+  longitudAprox         Decimal?     @db.Decimal(11, 8)
+  
+  // Características
+  metrosTerreno         Decimal?     @db.Decimal(10, 2)
+  metrosConstruccion    Decimal      @db.Decimal(10, 2)
+  recamaras             Int
+  banos                 Int
+  estacionamientos      Int          @default(0)
+  
+  // Créditos aceptados
+  aceptaContado         Boolean      @default(true)
+  aceptaBancario        Boolean      @default(false)
+  aceptaInfonavit       Boolean      @default(false)
+  aceptaFovissste       Boolean      @default(false)
+  
+  // Estado de la propiedad
+  estadoPropiedad       EstadoPropiedad @default(DISPONIBLE)
+  
+  // Medios
+  fotos                 String[]
+  videoUrl              String?
+  
+  // Métricas
+  vistas                Int          @default(0)
+  clicsWhatsapp         Int          @default(0)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relaciones
+  intereses             Interes[]
+  videos                PropiedadVideo[]
+  citas                 Cita[]
+
+  @@index([inmobiliariaId])
+  @@index([estado])
+  @@index([tipo])
+}
+
+model PropiedadVideo {
+  id                    String       @id @default(uuid())
+  propiedadId           String
+  propiedad             Propiedad    @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
+  
+  tipo                  TipoVideo
+  youtubeId             String?      // Para videos de YouTube (ID extraído)
+  archivoUrl            String?      // Para videos subidos (ruta del archivo)
+  orden                 Int          @default(0)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  @@index([propiedadId])
+  @@index([orden])
+}
+
+enum TipoVideo {
+  YOUTUBE
+  ARCHIVO
+}
+
+enum TipoOperacion {
+  VENTA
+  RENTA
+}
+
+enum EstadoPropiedad {
+  DISPONIBLE
+  APARTADA
+  VENDIDA
+}
+
+// PROSPECTOS Y CRM
+
+model Prospecto {
+  id                    String       @id @default(uuid())
+  inmobiliariaId        String
+  inmobiliaria          Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  nombre                String
+  telefono              String
+  email                 String?
+  
+  // Calificación
+  presupuesto           Decimal?     @db.Decimal(12, 2)
+  formaPago             String?
+  creditoPreaprobado    Decimal?     @db.Decimal(12, 2)
+  calificacion          Calificacion @default(FRIO)
+  calificacionManual    Boolean      @default(false)
+  
+  // Origen
+  origen                String?
+  
+  // Asignación
+  ejecutivoId           String?
+  ejecutivo             Usuario?     @relation(fields: [ejecutivoId], references: [id])
+  
+  // Estado en embudo
+  etapa                 EtapaEmbudo  @default(NUEVO)
+  
+  // Marca de no contactar (REPEP/BAJA)
+  noContactar           Boolean      @default(false)
+  motivoBaja            String?
+  fechaBaja             DateTime?
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relaciones
+  conversaciones        Conversacion[]
+  actividades           Actividad[]
+  consentimientos       Consentimiento[]
+  intereses             Interes[]
+  recordatorios         Recordatorio[]
+  citas                 Cita[]
+
+  @@index([inmobiliariaId])
+  @@index([telefono])
+  @@index([ejecutivoId])
+  @@index([etapa])
+  @@index([calificacion])
+}
+
+enum Calificacion {
+  CALIENTE
+  TIBIO
+  FRIO
+}
+
+enum EtapaEmbudo {
+  NUEVO
+  CONTACTADO
+  VISITA
+  OFERTA
+  APARTADO
+  CERRADO
+}
+
+model Interes {
+  id                String     @id @default(uuid())
+  prospectoId       String
+  prospecto         Prospecto  @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  propiedadId       String
+  propiedad         Propiedad  @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime   @default(now())
+
+  @@unique([prospectoId, propiedadId])
+  @@index([prospectoId])
+  @@index([propiedadId])
+}
+
+// CONVERSACIONES Y BOT
+
+model Conversacion {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto       @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  numeroWhatsappId  String?
+  numeroWhatsapp    NumeroWhatsapp? @relation(fields: [numeroWhatsappId], references: [id], onDelete: SetNull)
+  
+  plataforma        String          @default("whatsapp")
+  idExterno         String?
+  
+  atendidoPorBot    Boolean         @default(true)
+  pasadoAHumano     Boolean         @default(false)
+  botPausadoHasta   DateTime?
+  
+  // Estado del flujo de bot (booking, etc)
+  flujoBot          String?
+  flujoEstado       Json?
+  
+  resumenBot        String?         @db.Text
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relaciones
+  mensajes          Mensaje[]
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([idExterno])
+  @@index([numeroWhatsappId])
+  @@index([botPausadoHasta])
+}
+
+model Mensaje {
+  id                String       @id @default(uuid())
+  conversacionId    String
+  conversacion      Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  
+  remitente         String
+  contenido         String       @db.Text
+  esBot             Boolean      @default(false)
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([conversacionId])
+  @@index([createdAt])
+}
+
+// ACTIVIDADES Y RECORDATORIOS
+
+model Actividad {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String?
+  usuario           Usuario?     @relation(fields: [usuarioId], references: [id])
+  
+  tipo              TipoActividad
+  titulo            String
+  descripcion       String?      @db.Text
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([createdAt])
+}
+
+enum TipoActividad {
+  MENSAJE
+  LLAMADA
+  VISITA
+  NOTA
+  CAMBIO_ETAPA
+}
+
+model Recordatorio {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto    @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+  
+  titulo            String
+  descripcion       String?      @db.Text
+  fechaRecordatorio DateTime
+  completado        Boolean      @default(false)
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([usuarioId])
+  @@index([fechaRecordatorio])
+  @@index([completado])
+}
+
+// CONSENTIMIENTOS Y LEGAL
+
+model Consentimiento {
+  id                String       @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String?
+  prospecto         Prospecto?   @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  titular           String
+  tipo              TipoConsentimiento
+  accion            AccionConsentimiento
+  versionDocumento  String
+  textoHash         String
+  
+  canal             String
+  ip                String?
+  userAgent         String?
+  
+  createdAt         DateTime     @default(now())
+
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([tipo])
+  @@index([createdAt])
+}
+
+enum TipoConsentimiento {
+  AVISO_PRIVACIDAD
+  DATOS_FINANCIEROS
+  TRANSFERENCIAS
+  OPTIN_WHATSAPP_SERVICIO
+  OPTIN_WHATSAPP_MARKETING
+  OPTIN_LLAMADAS
+  COOKIES_ANALITICA
+  TERMINOS_SAAS
+  ENCARGO
+}
+
+enum AccionConsentimiento {
+  OTORGA
+  REVOCA
+  BAJA
+}
+
+// WHATSAPP MULTI-USUARIO
+
+model NumeroWhatsapp {
+  id                String              @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  nombre            String              // Etiqueta descriptiva (ej: "Mi WhatsApp Personal")
+  numero            String              @unique // Formato E.164: +5215512345678
+  proveedor         ProveedorWhatsapp   @default(WHATSAPP_WEB_JS)
+  
+  // Credenciales según proveedor
+  phoneNumberId     String?             // Para META_CLOUD
+  accessToken       String?             // Para META_CLOUD / TWILIO (cifrado)
+  sessionData       String?             @db.Text // Para WHATSAPP_WEB_JS / BAILEYS (sesión serializada, cifrada)
+  
+  activo            Boolean             @default(true)
+  estadoConexion    String?             @default("disconnected") // disconnected, connecting, connected, error
+  ultimaConexion    DateTime?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relaciones
+  conversaciones    Conversacion[]
+  listaNegra        ListaNegra[]
+  
+  @@index([usuarioId])
+  @@index([numero])
+  @@index([phoneNumberId])
+}
+
+enum ProveedorWhatsapp {
+  META_CLOUD          // Meta Cloud API (empresa)
+  WHATSAPP_WEB_JS     // whatsapp-web.js (QR, riesgo ban)
+  BAILEYS             // Baileys (multidevice, riesgo ban)
+  TWILIO              // Twilio WhatsApp API
+}
+
+model ListaNegra {
+  id                String          @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  numeroWhatsappId  String?
+  numeroWhatsapp    NumeroWhatsapp? @relation(fields: [numeroWhatsappId], references: [id], onDelete: SetNull)
+  
+  numeroRemitente   String          // Número del remitente a bloquear (normalizado E.164)
+  nombreContacto    String?         // Nombre opcional
+  nota              String?         // Nota del usuario
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([usuarioId, numeroRemitente])
+  @@index([usuarioId])
+  @@index([numeroWhatsappId])
+  @@index([numeroRemitente])
+}
+
+model ListaBlanca {
+  id                String          @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  numero            String          // Número permitido (normalizado E.164)
+  nombre            String?         // Nombre del contacto
+  nota              String?         // Nota del usuario
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([usuarioId, numero])
+  @@index([usuarioId])
+}
+
+// NOTIFICACIONES
+
+model Notificacion {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  tipo              TipoNotificacion
+  titulo            String
+  mensaje           String          @db.Text
+  enlace            String?
+  
+  leida             Boolean         @default(false)
+  leidaAt           DateTime?
+  
+  createdAt         DateTime        @default(now())
+  
+  @@index([inmobiliariaId])
+  @@index([usuarioId])
+  @@index([leida])
+  @@index([createdAt])
+}
+
+enum TipoNotificacion {
+  AGENTE_SOLICITADO
+  CITA_CREADA
+  CITA_CANCELADA
+  MENSAJE_NUEVO
+  SISTEMA
+}
+
+// CITAS Y VISITAS
+
+model Cita {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  prospectoId       String
+  prospecto         Prospecto       @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+  
+  propiedadId       String?
+  propiedad         Propiedad?      @relation(fields: [propiedadId], references: [id], onDelete: SetNull)
+  
+  asesorId          String?
+  asesor            Usuario?        @relation(fields: [asesorId], references: [id], onDelete: SetNull)
+  
+  fecha             DateTime        // Date only (local), time in hora
+  hora              String          // HH:MM local
+  duracionMin       Int             @default(60)
+  
+  estado            EstadoCita      @default(PENDIENTE)
+  origen            OrigenCita      @default(WHATSAPP)
+  
+  notas             String?         @db.Text
+  motivoCancelacion String?
+  
+  confirmadaAt      DateTime?
+  canceladaAt       DateTime?
+  recordatorioEnviadoAt DateTime?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([inmobiliariaId])
+  @@index([prospectoId])
+  @@index([propiedadId])
+  @@index([asesorId])
+  @@index([fecha])
+  @@index([estado])
+}
+
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  COMPLETADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+enum OrigenCita {
+  WHATSAPP
+  ADMIN
+  WEB
+}
+
+model HorarioCitas {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  // ISO day of week (1=Monday, 7=Sunday)
+  diaSemana         Int
+  
+  activo            Boolean         @default(true)
+  horaInicio        String          // HH:MM
+  horaFin           String          // HH:MM
+  
+  // Lunch break opcional
+  pausaInicio       String?         // HH:MM
+  pausaFin          String?         // HH:MM
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([inmobiliariaId, diaSemana])
+  @@index([inmobiliariaId])
+}
+
+model CierreCalendario {
+  id                String          @id @default(uuid())
+  inmobiliariaId    String
+  inmobiliaria      Inmobiliaria    @relation(fields: [inmobiliariaId], references: [id], onDelete: Cascade)
+  
+  fecha             DateTime        // Date
+  diaCompleto       Boolean         @default(true)
+  
+  // Si no es día completo
+  horaInicio        String?         // HH:MM
+  horaFin           String?         // HH:MM
+  
+  motivo            String
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([inmobiliariaId])
+  @@index([fecha])
+}

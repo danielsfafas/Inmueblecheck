@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: inmueblecheck-postgres
+    environment:
+      POSTGRES_USER: inmueblecheck
+      POSTGRES_PASSWORD: dev_password_2024
+      POSTGRES_DB: inmueblecheck
+    ports:
+      - "5446:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - inmueblecheck-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inmueblecheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: inmueblecheck-redis
+    ports:
+      - "6391:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - inmueblecheck-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inmueblecheck-backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://inmueblecheck:dev_password_2024@postgres:5432/inmueblecheck
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev_jwt_secret_change_in_production
+      PORT: 4311
+      FRONTEND_URL: http://localhost:5191
+      WHATSAPP_ENC_KEY: dev_encryption_key_change_in_prod_32bytes!
+      AI_PROVIDER: simulado
+    ports:
+      - "4311:4311"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - videos_data:/app/videos
+      - whatsapp_sessions:/app/sessions
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - inmueblecheck-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: inmueblecheck-frontend
+    environment:
+      VITE_API_URL: http://localhost:4311/api
+    ports:
+      - "5191:5191"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - inmueblecheck-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  videos_data:
+  whatsapp_sessions:
+
+networks:
+  inmueblecheck-network:
+    driver: bridge

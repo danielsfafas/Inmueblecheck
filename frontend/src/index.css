@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  ::selection {
+    @apply bg-primary-100 text-primary-900;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-1;
+  }
+}
+
+@layer components {
+  /* Campo de formulario compartido: borde visible, 44px de alto en touch,
+     16px de texto en móvil para que iOS no haga zoom al enfocar. */
+  .input-field {
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:bg-gray-50 disabled:text-gray-500 sm:text-sm;
+    min-height: 44px;
+  }
+
+  .checkbox-field {
+    @apply h-5 w-5 rounded border-gray-300 text-primary-600 accent-primary-600 focus:ring-primary-500;
+  }
+
+  /* Área táctil mínima de 44px para iconos sueltos. */
+  .tap-target {
+    @apply inline-flex items-center justify-center rounded-lg;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Horarios bloqueados (comida, cierres) en la agenda. */
+  .bg-stripes-gray {
+    background-color: theme('colors.gray.50');
+    background-image: repeating-linear-gradient(135deg, theme('colors.gray.200') 0 1px, transparent 1px 8px);
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}

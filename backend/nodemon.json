@@ -1,0 +1,20 @@
+{
+  "watch": ["src", "prisma"],
+  "ignore": [
+    "sessions",
+    "sessions/**",
+    "uploads",
+    "uploads/**",
+    "videos",
+    "videos/**",
+    "node_modules",
+    "node_modules/**",
+    "__tests__",
+    "__tests__/**",
+    "*.test.js",
+    "coverage",
+    "coverage/**"
+  ],
+  "ext": "js,json,prisma",
+  "exec": "node src/index.js"
+}
