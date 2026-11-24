@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 
 // Páginas públicas
@@ -26,6 +26,13 @@ import ConversacionDetallePage from './pages/dashboard/ConversacionDetallePage';
 import CitasPage from './pages/dashboard/CitasPage';
 import HorariosPage from './pages/dashboard/HorariosPage';
 
+// Links antiguos (/propiedades/:id y /propiedad/:id) → ficha pública con slug.
+// Antes se navegaba al texto literal ":id" y la ficha no abría.
+function LegacyPropiedadRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/i/casas-hidalgo/propiedades/${encodeURIComponent(id)}`} replace />;
+}
+
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
   
@@ -43,7 +50,8 @@ function App() {
       
       {/* Rutas legacy (redirigir a casas-hidalgo) */}
       <Route path="/propiedades" element={<Navigate to="/i/casas-hidalgo/propiedades" />} />
-      <Route path="/propiedades/:id" element={<Navigate to="/i/casas-hidalgo/propiedades/:id" />} />
+      <Route path="/propiedades/:id" element={<LegacyPropiedadRedirect />} />
+      <Route path="/propiedad/:id" element={<LegacyPropiedadRedirect />} />
       
       {/* Autenticación */}
       <Route path="/login" element={<LoginPage />} />

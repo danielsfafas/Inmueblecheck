@@ -1,4 +1,5 @@
 import { actualizarProspecto } from './whatsappBot.service.js';
+import { construirUrlPropiedad } from '../utils/publicUrl.js';
 
 export async function generarRespuestaIA(mensajeUsuario, contexto) {
   if (process.env.AI_PROVIDER === 'simulado' || !process.env.AI_API_KEY) {
@@ -58,7 +59,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const propsFiltradas = filtrarPropiedades(propiedadesDisponibles, { presupuestoMax: presupuestoDetectado * 1.1 });
     
     if (propsFiltradas.length > 0) {
-      return formatearListaPropiedades(propsFiltradas, inmobiliaria.nombre) +
+      return formatearListaPropiedades(propsFiltradas, inmobiliaria) +
              `\n\n¿Te interesa conocer más detalles de alguna?`;
     }
     return `Con un presupuesto de ${formatearPrecio(presupuestoDetectado)} MXN, déjame buscar las mejores opciones para ti.\n\n` +
@@ -72,11 +73,11 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     
     if (propsFiltradas.length > 0) {
       return `Propiedades en ${zonaDetectada}:\n\n` +
-             formatearListaPropiedades(propsFiltradas, inmobiliaria.nombre) +
+             formatearListaPropiedades(propsFiltradas, inmobiliaria) +
              `\n\n¿Cuál te gustaría conocer mejor?`;
     }
     return `En ${zonaDetectada} actualmente no tengo propiedades, pero te puedo mostrar opciones cercanas.\n\n` +
-           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria.nombre);
+           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria);
   }
 
   // 5. VER/MOSTRAR PROPIEDADES
@@ -86,7 +87,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
              `¿Te gustaría que un asesor te contacte para mostrarte las opciones más recientes? Escribe *AGENTE*.`;
     }
     
-    return formatearListaPropiedades(propiedadesDisponibles.slice(0, 5), inmobiliaria.nombre) +
+    return formatearListaPropiedades(propiedadesDisponibles.slice(0, 5), inmobiliaria) +
            `\n\n¿Te interesa alguna en particular?`;
   }
 
@@ -95,20 +96,20 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const casas = filtrarPropiedades(propiedadesDisponibles, { tipo: 'casa' });
     if (casas.length > 0) {
       return `Nuestras casas disponibles:\n\n` +
-             formatearListaPropiedades(casas, inmobiliaria.nombre);
+             formatearListaPropiedades(casas, inmobiliaria);
     }
     return `Actualmente no tenemos casas disponibles, pero tenemos otras opciones que podrían interesarte:\n\n` +
-           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria.nombre);
+           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria);
   }
 
   if (detectarIntent(mensaje, ['departamento', 'depas', 'depa'])) {
     const deptos = filtrarPropiedades(propiedadesDisponibles, { tipo: 'departamento' });
     if (deptos.length > 0) {
       return `Nuestros departamentos disponibles:\n\n` +
-             formatearListaPropiedades(deptos, inmobiliaria.nombre);
+             formatearListaPropiedades(deptos, inmobiliaria);
     }
     return `Actualmente no tenemos departamentos disponibles. Te muestro otras opciones:\n\n` +
-           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria.nombre);
+           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria);
   }
 
   // 7. OPERACIÓN (venta/renta)
@@ -116,7 +117,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const ventas = filtrarPropiedades(propiedadesDisponibles, { operacion: 'VENTA' });
     if (ventas.length > 0) {
       return `Propiedades en venta:\n\n` +
-             formatearListaPropiedades(ventas, inmobiliaria.nombre);
+             formatearListaPropiedades(ventas, inmobiliaria);
     }
   }
 
@@ -124,7 +125,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const rentas = filtrarPropiedades(propiedadesDisponibles, { operacion: 'RENTA' });
     if (rentas.length > 0) {
       return `Propiedades en renta:\n\n` +
-             formatearListaPropiedades(rentas, inmobiliaria.nombre);
+             formatearListaPropiedades(rentas, inmobiliaria);
     }
   }
 
@@ -133,7 +134,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const ordenadas = [...propiedadesDisponibles].sort((a, b) => Number(a.precio) - Number(b.precio));
     if (ordenadas.length > 0) {
       return `La opción más económica es:\n\n` +
-             formatearListaPropiedades([ordenadas[0]], inmobiliaria.nombre) +
+             formatearListaPropiedades([ordenadas[0]], inmobiliaria) +
              `\n\n¿Te gustaría más información sobre esta propiedad?`;
     }
   }
@@ -142,7 +143,7 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
   const numeroPropiedad = detectarNumeroPropiedad(mensaje);
   if (numeroPropiedad && numeroPropiedad <= propiedadesDisponibles.length) {
     const prop = propiedadesDisponibles[numeroPropiedad - 1];
-    return formatearDetallePropiedad(prop, inmobiliaria.nombre);
+    return formatearDetallePropiedad(prop, inmobiliaria);
   }
 
   // 10. FOTOS / IMÁGENES
@@ -190,10 +191,10 @@ function generarRespuestaSimulada(mensajeUsuario, contexto) {
     const propsFiltradas = filtrarPropiedades(propiedadesDisponibles, { recamaras });
     if (propsFiltradas.length > 0) {
       return `Propiedades con ${recamaras} recámara${recamaras > 1 ? 's' : ''}:\n\n` +
-             formatearListaPropiedades(propsFiltradas, inmobiliaria.nombre);
+             formatearListaPropiedades(propsFiltradas, inmobiliaria);
     }
     return `No tengo propiedades con ${recamaras} recámaras disponibles en este momento, pero te muestro otras opciones:\n\n` +
-           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria.nombre);
+           formatearListaPropiedades(propiedadesDisponibles.slice(0, 3), inmobiliaria);
   }
 
   // 15. UBICACIÓN / DIRECCIÓN
@@ -327,7 +328,7 @@ function filtrarPropiedades(propiedades, filtros) {
   return resultado;
 }
 
-function formatearListaPropiedades(propiedades, nombreInmobiliaria) {
+export function formatearListaPropiedades(propiedades, inmobiliaria) {
   if (propiedades.length === 0) {
     return `No encontré propiedades con esas características, pero puedes escribir *AGENTE* para que un asesor te ayude.`;
   }
@@ -338,19 +339,19 @@ function formatearListaPropiedades(propiedades, nombreInmobiliaria) {
     respuesta += `   📍 ${p.colonia || ''}, ${p.ciudad || ''}\n`;
     respuesta += `   💰 ${formatearPrecio(p.precio)} MXN\n`;
     if (p.recamaras) respuesta += `   🛏️ ${p.recamaras} rec, ${p.banos} baños\n`;
-    respuesta += `   🔗 Ver más: https://inmueblecheck.com/propiedad/${p.id}\n\n`;
+    respuesta += `   🔗 Ver más: ${construirUrlPropiedad(p.id, inmobiliaria)}\n\n`;
   });
 
   return respuesta;
 }
 
-function formatearDetallePropiedad(prop, nombreInmobiliaria) {
+export function formatearDetallePropiedad(prop, inmobiliaria) {
   let respuesta = `*${prop.titulo}*\n\n`;
   respuesta += `📍 ${prop.colonia}, ${prop.ciudad}\n`;
   respuesta += `💰 ${formatearPrecio(prop.precio)} MXN\n`;
   if (prop.recamaras) respuesta += `🛏️ ${prop.recamaras} recámaras, ${prop.banos} baños\n`;
   respuesta += `\n🔗 Ver fotos y más detalles:\n`;
-  respuesta += `https://inmueblecheck.com/propiedad/${prop.id}\n\n`;
+  respuesta += `${construirUrlPropiedad(prop.id, inmobiliaria)}\n\n`;
   respuesta += `¿Te gustaría agendar una visita? Escribe *AGENTE*.`;
   
   return respuesta;
