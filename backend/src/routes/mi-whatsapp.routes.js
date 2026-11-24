@@ -392,6 +392,84 @@ router.delete('/lista-negra/:id', async (req, res, next) => {
   }
 });
 
+// LISTA BLANCA (WHITELIST)
+
+// Obtener lista blanca del usuario
+router.get('/lista-blanca', async (req, res, next) => {
+  try {
+    const listaBlanca = await prisma.listaBlanca.findMany({
+      where: {
+        usuarioId: req.user.id,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(listaBlanca);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Agregar número a lista blanca
+router.post('/lista-blanca', async (req, res, next) => {
+  try {
+    const { numero, nombre, nota } = req.body;
+
+    if (!numero) {
+      return res.status(400).json({ error: 'numero es obligatorio' });
+    }
+
+    // Normalizar número
+    const numeroNormalizado = normalizarNumeroE164(numero);
+
+    if (!numeroNormalizado) {
+      return res.status(400).json({ error: 'Número de teléfono inválido' });
+    }
+
+    const entrada = await prisma.listaBlanca.create({
+      data: {
+        usuarioId: req.user.id,
+        numero: numeroNormalizado,
+        nombre: nombre || null,
+        nota: nota || null,
+      },
+    });
+
+    res.status(201).json(entrada);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Este número ya está en tu lista blanca' });
+    }
+    next(error);
+  }
+});
+
+// Eliminar número de lista blanca
+router.delete('/lista-blanca/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const entrada = await prisma.listaBlanca.findFirst({
+      where: {
+        id,
+        usuarioId: req.user.id,
+      },
+    });
+
+    if (!entrada) {
+      return res.status(404).json({ error: 'Entrada no encontrada' });
+    }
+
+    await prisma.listaBlanca.delete({
+      where: { id },
+    });
+
+    res.json({ message: 'Número eliminado de lista blanca' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ADMIN: Ver todos los números de la inmobiliaria
 router.get('/admin/numeros', requireRole('ADMIN', 'SUPERVISOR'), async (req, res, next) => {
   try {

@@ -72,6 +72,7 @@ model Usuario {
   sesiones                Sesion[]
   numerosWhatsapp         NumeroWhatsapp[]
   listaNegra              ListaNegra[]
+  listaBlanca             ListaBlanca[]
 
   @@unique([inmobiliariaId, email])
   @@index([inmobiliariaId])
@@ -483,4 +484,20 @@ model ListaNegra {
   @@index([usuarioId])
   @@index([numeroWhatsappId])
   @@index([numeroRemitente])
+}
+
+model ListaBlanca {
+  id                String          @id @default(uuid())
+  usuarioId         String
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  numero            String          // Número permitido (normalizado E.164)
+  nombre            String?         // Nombre del contacto
+  nota              String?         // Nota del usuario
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@unique([usuarioId, numero])
+  @@index([usuarioId])
 }

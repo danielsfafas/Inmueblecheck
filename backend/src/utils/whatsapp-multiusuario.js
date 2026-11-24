@@ -81,6 +81,41 @@ export async function estaEnListaNegra(prisma, usuarioId, numeroRemitente) {
 }
 
 /**
+ * Verificar si un número debe ser atendido según lista blanca (whitelist)
+ * Regla de Daniel: si lista blanca está VACÍA → atiende a TODOS
+ * Si tiene al menos 1 número → SOLO atiende a números en la lista
+ * @returns {Promise<boolean>} true si debe atender, false si ignorar
+ */
+export async function debeAtenderSegunListaBlanca(prisma, usuarioId, numeroRemitente) {
+  // Contar entradas en lista blanca del usuario
+  const countListaBlanca = await prisma.listaBlanca.count({
+    where: { usuarioId },
+  });
+
+  // Si lista blanca está vacía → atender a todos
+  if (countListaBlanca === 0) {
+    return true;
+  }
+
+  // Si tiene entradas → solo atender si el número está en la lista
+  const numeroNormalizado = normalizarNumeroE164(numeroRemitente);
+  
+  const entrada = await prisma.listaBlanca.findFirst({
+    where: {
+      usuarioId,
+      OR: [
+        // Comparar contra número E.164
+        ...(numeroNormalizado ? [{ numero: numeroNormalizado }] : []),
+        // Comparar contra LID completo o número sin normalizar
+        { numero: numeroRemitente },
+      ],
+    },
+  });
+
+  return !!entrada;
+}
+
+/**
  * Encontrar número WhatsApp receptor por phone_number_id (Meta Cloud API)
  */
 export async function encontrarNumeroPorPhoneNumberId(prisma, phoneNumberId) {

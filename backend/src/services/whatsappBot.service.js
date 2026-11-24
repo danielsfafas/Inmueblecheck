@@ -4,6 +4,7 @@ import { generarMensajeBienvenida } from '../utils/botMessages.js';
 import {
   encontrarNumeroPorPhoneNumberId,
   estaEnListaNegra,
+  debeAtenderSegunListaBlanca,
   normalizarNumeroE164,
 } from '../utils/whatsapp-multiusuario.js';
 
@@ -58,63 +59,25 @@ export async function procesarMensajeBot(telefono, mensaje, phoneNumberId = null
 
     console.log(`📞 Número receptor: ${numeroReceptor.nombre} (${numeroReceptor.numero}) - Usuario: ${numeroReceptor.usuario.nombre}`);
 
-    // 2. Verificar lista negra del dueño del número receptor
+    // 2. Verificar lista negra del dueño del número receptor (blacklist siempre gana)
     const telefonoNormalizado = normalizarNumeroE164(telefono);
     const bloqueado = await estaEnListaNegra(prisma, numeroReceptor.usuarioId, telefonoNormalizado);
 
     if (bloqueado) {
       console.log(`🚫 DECISIÓN: NO responder - Número ${telefono} está en lista negra del usuario ${numeroReceptor.usuario.nombre}`);
-      
-      // Buscar/crear prospecto para guardar el mensaje (sin responder)
-      let prospecto = await prisma.prospecto.findFirst({
-        where: {
-          telefono: telefonoNormalizado || telefono,
-          inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
-        },
-        include: { inmobiliaria: true },
-      });
-
-      if (!prospecto) {
-        console.log('Prospecto no encontrado y está en lista negra - mensaje ignorado');
-        return;
-      }
-
-      // Buscar o crear conversación
-      let conversacion = await prisma.conversacion.findFirst({
-        where: {
-          prospectoId: prospecto.id,
-          numeroWhatsappId: numeroReceptor.id,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (!conversacion) {
-        conversacion = await prisma.conversacion.create({
-          data: {
-            inmobiliariaId: numeroReceptor.usuario.inmobiliariaId,
-            prospectoId: prospecto.id,
-            numeroWhatsappId: numeroReceptor.id,
-            plataforma: 'whatsapp',
-            idExterno: telefono,
-            atendidoPorBot: false, // Marcado como no atendido por bot (lista negra)
-            pasadoAHumano: true, // Pasa directo a humano
-          },
-        });
-      }
-
-      // Guardar mensaje del cliente (sin respuesta del bot)
-      await prisma.mensaje.create({
-        data: {
-          conversacionId: conversacion.id,
-          remitente: telefono,
-          contenido: mensaje,
-          esBot: false,
-        },
-      });
-
-      console.log('✅ Mensaje guardado (lista negra - sin respuesta de bot)');
-      return;
+      return; // Blacklist gana, ignorar silenciosamente
     }
+
+    // 3. Verificar lista blanca (whitelist)
+    // Regla: si lista blanca vacía → atiende a todos, si tiene números → solo atiende a esos
+    const debeAtender = await debeAtenderSegunListaBlanca(prisma, numeroReceptor.usuarioId, telefono);
+
+    if (!debeAtender) {
+      console.log(`📋 DECISIÓN: NO responder - Número ${telefono} no está en lista blanca del usuario ${numeroReceptor.usuario.nombre} (whitelist activa)`);
+      return; // Ignorar silenciosamente
+    }
+
+    // Si llegamos aquí: no está en blacklist Y (whitelist vacía O está en whitelist) → ATENDER
 
     // 3. Buscar o crear prospecto automáticamente
     let prospecto = await prisma.prospecto.findFirst({
