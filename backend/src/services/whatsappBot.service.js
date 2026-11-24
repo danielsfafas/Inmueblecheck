@@ -335,8 +335,9 @@ async function obtenerContextoConversacion(conversacionId, prospecto) {
   const propiedades = await prisma.propiedad.findMany({
     where: {
       inmobiliariaId: prospecto.inmobiliariaId,
-      estado: 'DISPONIBLE',
+      estadoPropiedad: 'DISPONIBLE',
     },
+    take: 20,
     select: {
       id: true,
       titulo: true,
